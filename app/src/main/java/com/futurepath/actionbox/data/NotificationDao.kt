@@ -19,4 +19,23 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM captured_notifications")
     suspend fun count(): Int
+
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1 FROM captured_notifications
+            WHERE sourceApp = :sourceApp
+              AND sender = :sender
+              AND text = :text
+              AND timestamp BETWEEN :minTimestamp AND :maxTimestamp
+        )
+        """
+    )
+    suspend fun existsSimilar(
+        sourceApp: String,
+        sender: String,
+        text: String,
+        minTimestamp: Long,
+        maxTimestamp: Long
+    ): Boolean
 }

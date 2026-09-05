@@ -48,6 +48,12 @@ class CapturedNotificationListenerService : NotificationListenerService() {
             return
         }
 
+        if (!NotificationNoiseFilter.shouldCapture(packageName, sbn.notification)) {
+            // Call UI overlays and OS utility notifications (screenshots, etc.) are never
+            // actionable items — drop them before they ever reach Room.
+            return
+        }
+
         val extras = sbn.notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
