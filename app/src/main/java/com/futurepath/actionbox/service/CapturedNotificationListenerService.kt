@@ -6,6 +6,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.futurepath.actionbox.data.NotificationDebugEvent
 import com.futurepath.actionbox.data.NotificationRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,58 +44,51 @@ class CapturedNotificationListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
 
-        // TEMPORARY: confirms whether Android calls this callback more than once for what
-        // looks like the same message, and whether repeat calls carry the same or a
-        // different sbn.key. Remove once WhatsApp duplicate/dropped captures are confirmed
-        // fixed on-device.
-        Log.d(
-            TAG,
-            "onNotificationPosted: key=${sbn.key} pkg=${sbn.packageName} id=${sbn.id} " +
-                "tag=${sbn.tag} postTime=${sbn.postTime} isOngoing=${sbn.isOngoing}"
-        )
-
         val packageName = sbn.packageName
         if (packageName == applicationContext.packageName) {
-            // Don't capture our own notifications.
+            // Don't capture or log our own notifications.
             return
         }
 
-        if (!NotificationNoiseFilter.shouldCapture(packageName, sbn.notification)) {
-            // Call UI overlays and OS utility notifications (screenshots, etc.) are never
-            // actionable items — drop them before they ever reach Room.
-            return
-        }
-
-        if (sbn.isOngoing) {
-            // Persistent foreground-service status notifications (e.g. Termux's
-            // "N session(s)") update repeatedly without representing a new event.
-            return
-        }
-
+        val receivedAt = System.currentTimeMillis()
         val content = extractContent(sbn)
 
-        // TEMPORARY: shows exactly what was extracted and from which path, so a dropped or
-        // duplicated message can be traced to either stale/wrong extraction (content looks
-        // wrong here) or a dedup bug (content is correct here but still missing from the
-        // feed).
-        Log.d(
-            TAG,
-            "Extracted (${content.source}): sender=${content.sender} text=${content.text} " +
-                "messageTimestamp=${content.timestamp}"
-        )
-
-        if (content.sender.isBlank() && content.text.isBlank()) {
-            // Nothing worth capturing (e.g. a silent/progress-only notification).
-            return
+        // Every path below still logs a NotificationDebugEvent with the raw data and the
+        // reason nothing was captured, so a filtered/deduped/dropped notification is
+        // visible in the on-device debug feed exactly like a captured one.
+        val outcome: String? = when {
+            !NotificationNoiseFilter.shouldCapture(packageName, sbn.notification) -> "filtered_noise"
+            sbn.isOngoing -> "filtered_ongoing"
+            content.sender.isBlank() && content.text.isBlank() -> "blank_skipped"
+            else -> null // proceed to the capture attempt below
         }
 
         serviceScope.launch {
-            repository.capture(
-                notificationKey = sbn.key,
-                sourceApp = packageName,
-                sender = content.sender,
-                text = content.text,
-                timestamp = content.timestamp
+            val finalOutcome = outcome ?: run {
+                val wasInserted = repository.capture(
+                    notificationKey = sbn.key,
+                    sourceApp = packageName,
+                    sender = content.sender,
+                    text = content.text,
+                    timestamp = content.timestamp
+                )
+                if (wasInserted) "captured" else "duplicate_ignored"
+            }
+
+            repository.logDebugEvent(
+                NotificationDebugEvent(
+                    receivedAt = receivedAt,
+                    notificationKey = sbn.key,
+                    sourceApp = packageName,
+                    rawExtraText = content.rawExtraText,
+                    rawExtraBigText = content.rawExtraBigText,
+                    extractionSource = content.source,
+                    messagingStyleDump = content.messagingStyleDump,
+                    resolvedSender = content.sender,
+                    resolvedText = content.text,
+                    resolvedTimestamp = content.timestamp,
+                    outcome = finalOutcome
+                )
             )
         }
     }
@@ -108,30 +102,27 @@ class CapturedNotificationListenerService : NotificationListenerService() {
      * For MessagingStyle notifications (WhatsApp, SMS, etc.), the top-level EXTRA_TEXT/
      * EXTRA_BIG_TEXT is a compatibility summary field that isn't guaranteed to reflect the
      * newest individual message. Reading the actual message list instead gives the latest
-     * message's own text and timestamp — the two are always consistent with each other
-     * because they come from the same list entry, whereas the summary field and postTime
-     * can each lag independently.
+     * message's own text and timestamp. Also returns the raw fields and the full message
+     * list dump so they can be inspected on-device via the debug feed.
      */
     private fun extractContent(sbn: StatusBarNotification): ExtractedContent {
         val extras = sbn.notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+        val rawExtraText = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+        val rawExtraBigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
 
         val messagingStyle = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(sbn.notification)
         val messages = messagingStyle?.messages.orEmpty()
-
-        // TEMPORARY: dumps every message this notification instance currently reports, in
-        // list order, with its own timestamp. If sending 3 messages a few seconds apart
-        // shows this list NOT growing/advancing (e.g. always 1 entry, or entries with a
-        // timestamp that never changes), the bug is upstream of selection (extraction or
-        // the source app itself) rather than which entry we pick.
-        messages.forEachIndexed { index, message ->
-            Log.d(TAG, "  messagingStyle[$index]: text=${message.text} timestamp=${message.timestamp}")
+        val messagingStyleDump = if (messages.isEmpty()) {
+            "(none)"
+        } else {
+            messages.mapIndexed { index, message -> "[$index] t=${message.timestamp} \"${message.text}\"" }
+                .joinToString("\n")
         }
 
         // Select by max timestamp rather than trusting list position (first/last) — this
         // is correct regardless of which order the underlying platform/OEM happens to
-        // return the list in, since "most recent" is defined by the message's own
-        // timestamp, not where it sits in the list.
+        // return the list in.
         val latestMessage = messages.maxByOrNull { it.timestamp }
 
         return if (latestMessage != null) {
@@ -139,16 +130,20 @@ class CapturedNotificationListenerService : NotificationListenerService() {
                 sender = title,
                 text = latestMessage.text?.toString().orEmpty(),
                 timestamp = latestMessage.timestamp,
-                source = "messagingStyle"
+                source = "messagingStyle",
+                rawExtraText = rawExtraText,
+                rawExtraBigText = rawExtraBigText,
+                messagingStyleDump = messagingStyleDump
             )
         } else {
-            val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
-                ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
             ExtractedContent(
                 sender = title,
-                text = text,
+                text = (rawExtraBigText ?: rawExtraText).orEmpty(),
                 timestamp = sbn.postTime,
-                source = "topLevelExtras"
+                source = "topLevelExtras",
+                rawExtraText = rawExtraText,
+                rawExtraBigText = rawExtraBigText,
+                messagingStyleDump = messagingStyleDump
             )
         }
     }
@@ -157,7 +152,10 @@ class CapturedNotificationListenerService : NotificationListenerService() {
         val sender: String,
         val text: String,
         val timestamp: Long,
-        val source: String
+        val source: String,
+        val rawExtraText: String?,
+        val rawExtraBigText: String?,
+        val messagingStyleDump: String
     )
 
     companion object {

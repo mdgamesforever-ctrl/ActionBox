@@ -1,24 +1,29 @@
 package com.futurepath.actionbox.data
 
 import android.content.Context
-import android.util.Log
 import kotlinx.coroutines.flow.Flow
 
 class NotificationRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).notificationDao()
+    private val debugEventDao = AppDatabase.getInstance(context).notificationDebugEventDao()
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
+    fun observeDebugEvents(): Flow<List<NotificationDebugEvent>> = debugEventDao.observeAll()
+
+    suspend fun logDebugEvent(event: NotificationDebugEvent) {
+        debugEventDao.insert(event)
+    }
+
     /**
      * Dedup is entirely enforced by the two unique indices on [NotificationEntity] (see
-     * [NotificationDao.insert]) rather than a time-window heuristic here: a prior
-     * "same content within N seconds" check was found to drop genuinely different messages
-     * that arrived in quick succession, since it treated recency alone as evidence of a
-     * duplicate. Requiring the message's own timestamp (not capture time) plus identical
-     * text to match exactly avoids that false positive.
+     * [NotificationDao.insert]): a notification only fails to insert if the same
+     * notificationKey, or the same sourceApp/sender/text/timestamp combination, is already
+     * stored. Returns whether the row was actually inserted, so the caller can log the
+     * real outcome (captured vs. ignored as a duplicate).
      */
-    suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long) {
+    suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long): Boolean {
         val rowId = dao.insert(
             NotificationEntity(
                 notificationKey = notificationKey,
@@ -28,21 +33,10 @@ class NotificationRepository(context: Context) {
                 timestamp = timestamp
             )
         )
-
-        if (rowId == -1L) {
-            Log.d(
-                TAG,
-                "Insert ignored (duplicate): sourceApp=$sourceApp sender=$sender " +
-                    "timestamp=$timestamp key=$notificationKey"
-            )
-        } else {
-            Log.d(TAG, "Captured notification id=$rowId sourceApp=$sourceApp timestamp=$timestamp key=$notificationKey")
-        }
+        return rowId != -1L
     }
 
     companion object {
-        private const val TAG = "ActionBoxRepository"
-
         @Volatile
         private var instance: NotificationRepository? = null
 
