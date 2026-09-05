@@ -54,6 +54,12 @@ class CapturedNotificationListenerService : NotificationListenerService() {
             return
         }
 
+        if (sbn.isOngoing) {
+            // Persistent foreground-service status notifications (e.g. Termux's
+            // "N session(s)") update repeatedly without representing a new event.
+            return
+        }
+
         val extras = sbn.notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
@@ -68,6 +74,7 @@ class CapturedNotificationListenerService : NotificationListenerService() {
 
         serviceScope.launch {
             repository.capture(
+                notificationKey = sbn.key,
                 sourceApp = packageName,
                 sender = title,
                 text = text,
