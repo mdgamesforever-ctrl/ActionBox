@@ -24,5 +24,9 @@ data class NotificationDebugEvent(
     val resolvedSender: String,
     val resolvedText: String,
     val resolvedTimestamp: Long,
-    val outcome: String
+    val outcome: String,
+    // Populated only when outcome is "duplicate_ignored": which constraint matched, which
+    // existing row it matched, and how long ago that row was originally captured — so a
+    // duplicate can be told apart from "blocked by stale data from an earlier test run."
+    val conflictDetail: String?
 )

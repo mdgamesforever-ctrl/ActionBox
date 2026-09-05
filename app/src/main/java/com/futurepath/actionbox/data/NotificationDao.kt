@@ -29,5 +29,19 @@ interface NotificationDao {
     suspend fun getAll(): List<NotificationEntity>
 
     @Query("SELECT COUNT(*) FROM captured_notifications")
-    suspend fun count(): Int
+    fun observeCount(): Flow<Int>
+
+    // Diagnostic-only: called after an insert is ignored, to find out which constraint
+    // caused it and when that row was originally captured.
+    @Query("SELECT * FROM captured_notifications WHERE notificationKey = :notificationKey LIMIT 1")
+    suspend fun findByKey(notificationKey: String): NotificationEntity?
+
+    @Query(
+        """
+        SELECT * FROM captured_notifications
+        WHERE sourceApp = :sourceApp AND sender = :sender AND text = :text AND timestamp = :timestamp
+        LIMIT 1
+        """
+    )
+    suspend fun findByContent(sourceApp: String, sender: String, text: String, timestamp: Long): NotificationEntity?
 }

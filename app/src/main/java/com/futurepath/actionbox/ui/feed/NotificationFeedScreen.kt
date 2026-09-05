@@ -29,12 +29,19 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun NotificationFeedScreen(events: List<NotificationDebugEvent>) {
+fun NotificationFeedScreen(events: List<NotificationDebugEvent>, capturedCount: Int) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text(
             text = stringResource(R.string.feed_title),
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp)
+        )
+        // Ground truth for whether "DUPLICATE (ignored)" rows are really excluded from the
+        // real table: compare this against the number of events labeled CAPTURED below.
+        Text(
+            text = "$capturedCount row(s) in captured_notifications · ${events.size} event(s) shown below",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 12.dp, end = 16.dp)
         )
 
         if (events.isEmpty()) {
@@ -97,6 +104,7 @@ private fun DebugEventRow(event: NotificationDebugEvent) {
                 RawDetailField("EXTRA_TEXT", event.rawExtraText ?: "(absent)")
                 RawDetailField("EXTRA_BIG_TEXT", event.rawExtraBigText ?: "(absent)")
                 RawDetailField("MessagingStyle.messages", event.messagingStyleDump)
+                event.conflictDetail?.let { RawDetailField("Why duplicate", it) }
             }
         }
     }

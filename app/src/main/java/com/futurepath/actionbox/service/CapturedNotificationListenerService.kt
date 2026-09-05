@@ -64,15 +64,23 @@ class CapturedNotificationListenerService : NotificationListenerService() {
         }
 
         serviceScope.launch {
-            val finalOutcome = outcome ?: run {
-                val wasInserted = repository.capture(
+            val finalOutcome: String
+            val conflictDetail: String?
+
+            if (outcome != null) {
+                finalOutcome = outcome
+                conflictDetail = null
+            } else {
+                val result = repository.capture(
                     notificationKey = sbn.key,
                     sourceApp = packageName,
                     sender = content.sender,
                     text = content.text,
-                    timestamp = content.timestamp
+                    timestamp = content.timestamp,
+                    receivedAt = receivedAt
                 )
-                if (wasInserted) "captured" else "duplicate_ignored"
+                finalOutcome = if (result.wasInserted) "captured" else "duplicate_ignored"
+                conflictDetail = result.conflictDetail
             }
 
             repository.logDebugEvent(
@@ -87,7 +95,8 @@ class CapturedNotificationListenerService : NotificationListenerService() {
                     resolvedSender = content.sender,
                     resolvedText = content.text,
                     resolvedTimestamp = content.timestamp,
-                    outcome = finalOutcome
+                    outcome = finalOutcome,
+                    conflictDetail = conflictDetail
                 )
             )
         }

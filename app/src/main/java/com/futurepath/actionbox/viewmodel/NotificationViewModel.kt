@@ -18,6 +18,15 @@ class NotificationViewModel(private val repository: NotificationRepository) : Vi
             initialValue = emptyList()
         )
 
+    // Ground truth for "is a duplicate really excluded from the real table" — compare this
+    // against the number of "captured" rows in debugEvents to sanity-check the label.
+    val capturedCount: StateFlow<Int> = repository.observeCapturedCount()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
     class Factory(private val repository: NotificationRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

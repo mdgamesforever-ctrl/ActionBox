@@ -56,7 +56,8 @@ class MainActivity : ComponentActivity() {
 
                 if (hasContinuedPastOnboarding && isAccessGranted) {
                     val events by viewModel.debugEvents.collectAsStateWithLifecycle()
-                    NotificationFeedScreen(events = events)
+                    val capturedCount by viewModel.capturedCount.collectAsStateWithLifecycle()
+                    NotificationFeedScreen(events = events, capturedCount = capturedCount)
                 } else {
                     PermissionOnboardingScreen(
                         isAccessGranted = isAccessGranted,

@@ -23,5 +23,10 @@ data class NotificationEntity(
     val sender: String,
     val text: String,
     val timestamp: Long,
+    // Device wall-clock time this row was inserted — distinct from [timestamp], which is
+    // the message's own timestamp. Lets a later duplicate lookup show whether it collided
+    // with something captured a second ago (a genuine repeat callback) or hours/days ago
+    // (stale data from an earlier test run), instead of just "it was a duplicate."
+    val capturedAt: Long,
     val isProcessed: Boolean = false
 )
