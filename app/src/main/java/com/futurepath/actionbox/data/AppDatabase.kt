@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [NotificationEntity::class], version = 2, exportSchema = false)
+@Database(entities = [NotificationEntity::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun notificationDao(): NotificationDao
@@ -22,7 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "actionbox.db"
                 )
                     // Pre-release debug build; no captured data is worth preserving across
-                    // this schema change (adding the notificationKey column/index).
+                    // these schema changes (unique indices added for dedup).
                     .fallbackToDestructiveMigration()
                     .build().also { instance = it }
             }

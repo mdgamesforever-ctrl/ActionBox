@@ -11,27 +11,14 @@ class NotificationRepository(context: Context) {
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
     /**
-     * Two layers of dedup:
-     *  1. Primary: [NotificationEntity.notificationKey] has a unique index and insert uses
-     *     onConflict = IGNORE, so a repeat callback for the exact same StatusBarNotification
-     *     (same key) never produces a second row — enforced atomically by the DB.
-     *  2. Fallback: WhatsApp (and possibly other apps) can post what's semantically the same
-     *     message under two different keys. If the most recent row with the same
-     *     sourceApp/sender/text was captured within [RECENT_DUPLICATE_WINDOW_MS], treat this
-     *     as the same event rather than scanning all-time history — so identical text sent
-     *     again hours later is still captured.
+     * Dedup is entirely enforced by the two unique indices on [NotificationEntity] (see
+     * [NotificationDao.insert]) rather than a time-window heuristic here: a prior
+     * "same content within N seconds" check was found to drop genuinely different messages
+     * that arrived in quick succession, since it treated recency alone as evidence of a
+     * duplicate. Requiring the message's own timestamp (not capture time) plus identical
+     * text to match exactly avoids that false positive.
      */
     suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long) {
-        val mostRecentMatch = dao.mostRecentTimestampFor(sourceApp, sender, text)
-        if (mostRecentMatch != null && kotlin.math.abs(timestamp - mostRecentMatch) <= RECENT_DUPLICATE_WINDOW_MS) {
-            Log.d(
-                TAG,
-                "Skipping duplicate: sourceApp=$sourceApp sender=$sender key=$notificationKey " +
-                    "matches recent capture at $mostRecentMatch (this timestamp=$timestamp)"
-            )
-            return
-        }
-
         val rowId = dao.insert(
             NotificationEntity(
                 notificationKey = notificationKey,
@@ -43,18 +30,18 @@ class NotificationRepository(context: Context) {
         )
 
         if (rowId == -1L) {
-            Log.d(TAG, "Insert ignored by unique key constraint: notificationKey=$notificationKey already stored")
+            Log.d(
+                TAG,
+                "Insert ignored (duplicate): sourceApp=$sourceApp sender=$sender " +
+                    "timestamp=$timestamp key=$notificationKey"
+            )
         } else {
-            Log.d(TAG, "Captured notification id=$rowId sourceApp=$sourceApp key=$notificationKey")
+            Log.d(TAG, "Captured notification id=$rowId sourceApp=$sourceApp timestamp=$timestamp key=$notificationKey")
         }
     }
 
     companion object {
         private const val TAG = "ActionBoxRepository"
-
-        // How close two captures of the same sourceApp/sender/text have to be to be treated
-        // as one event rather than two separate messages with identical content.
-        private const val RECENT_DUPLICATE_WINDOW_MS = 30_000L
 
         @Volatile
         private var instance: NotificationRepository? = null

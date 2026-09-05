@@ -10,11 +10,14 @@ import kotlinx.coroutines.flow.Flow
 interface NotificationDao {
 
     /**
-     * IGNORE relies on the unique index on [NotificationEntity.notificationKey]: if a
-     * notification with the same system-assigned key is already stored, this insert is a
-     * silent no-op. Enforcing the dedup as a DB constraint (rather than a separate
-     * check-then-insert) makes it atomic, so two near-simultaneous onNotificationPosted
-     * calls for the same notification can't both slip past a check and both insert.
+     * IGNORE relies on two unique indices on [NotificationEntity]:
+     *  - notificationKey: catches a repeat callback for the exact same
+     *    StatusBarNotification (same system-assigned key).
+     *  - (sourceApp, sender, text, timestamp): catches the case where Android/the source
+     *    app reposts the same logical message under a different key, but the extracted
+     *    content and message-level timestamp are identical.
+     * Both are enforced as DB constraints rather than a separate check-then-insert, so
+     * concurrent onNotificationPosted calls can't both slip past a check and both insert.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(notification: NotificationEntity): Long
@@ -27,21 +30,4 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM captured_notifications")
     suspend fun count(): Int
-
-    /**
-     * Fallback dedup for when Android assigns two different StatusBarNotification keys to
-     * what is really the same message (observed with WhatsApp). Only looks at the single
-     * most recent row for this exact sourceApp/sender/text combination, so a message with
-     * identical text sent again hours later is unaffected — only the immediately preceding
-     * capture of the same content is considered.
-     */
-    @Query(
-        """
-        SELECT timestamp FROM captured_notifications
-        WHERE sourceApp = :sourceApp AND sender = :sender AND text = :text
-        ORDER BY timestamp DESC
-        LIMIT 1
-        """
-    )
-    suspend fun mostRecentTimestampFor(sourceApp: String, sender: String, text: String): Long?
 }

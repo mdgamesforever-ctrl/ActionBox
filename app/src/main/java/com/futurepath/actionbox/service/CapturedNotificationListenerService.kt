@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.futurepath.actionbox.data.NotificationRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +45,8 @@ class CapturedNotificationListenerService : NotificationListenerService() {
 
         // TEMPORARY: confirms whether Android calls this callback more than once for what
         // looks like the same message, and whether repeat calls carry the same or a
-        // different sbn.key. Remove once WhatsApp duplicate captures are confirmed fixed.
+        // different sbn.key. Remove once WhatsApp duplicate/dropped captures are confirmed
+        // fixed on-device.
         Log.d(
             TAG,
             "onNotificationPosted: key=${sbn.key} pkg=${sbn.packageName} id=${sbn.id} " +
@@ -69,25 +71,30 @@ class CapturedNotificationListenerService : NotificationListenerService() {
             return
         }
 
-        val extras = sbn.notification.extras
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
-        val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
-            ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
+        val content = extractContent(sbn)
 
-        if (title.isBlank() && text.isBlank()) {
+        // TEMPORARY: shows exactly what was extracted and from which path, so a dropped or
+        // duplicated message can be traced to either stale/wrong extraction (content looks
+        // wrong here) or a dedup bug (content is correct here but still missing from the
+        // feed).
+        Log.d(
+            TAG,
+            "Extracted (${content.source}): sender=${content.sender} text=${content.text} " +
+                "messageTimestamp=${content.timestamp}"
+        )
+
+        if (content.sender.isBlank() && content.text.isBlank()) {
             // Nothing worth capturing (e.g. a silent/progress-only notification).
             return
         }
-
-        val timestamp = sbn.postTime
 
         serviceScope.launch {
             repository.capture(
                 notificationKey = sbn.key,
                 sourceApp = packageName,
-                sender = title,
-                text = text,
-                timestamp = timestamp
+                sender = content.sender,
+                text = content.text,
+                timestamp = content.timestamp
             )
         }
     }
@@ -96,6 +103,47 @@ class CapturedNotificationListenerService : NotificationListenerService() {
         super.onDestroy()
         serviceJob.cancel()
     }
+
+    /**
+     * For MessagingStyle notifications (WhatsApp, SMS, etc.), the top-level EXTRA_TEXT/
+     * EXTRA_BIG_TEXT is a compatibility summary field that isn't guaranteed to reflect the
+     * newest individual message. Reading the actual message list instead gives the latest
+     * message's own text and timestamp — the two are always consistent with each other
+     * because they come from the same list entry, whereas the summary field and postTime
+     * can each lag independently.
+     */
+    private fun extractContent(sbn: StatusBarNotification): ExtractedContent {
+        val extras = sbn.notification.extras
+        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
+
+        val messagingStyle = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(sbn.notification)
+        val latestMessage = messagingStyle?.messages?.lastOrNull()
+
+        return if (latestMessage != null) {
+            ExtractedContent(
+                sender = title,
+                text = latestMessage.text?.toString().orEmpty(),
+                timestamp = latestMessage.timestamp,
+                source = "messagingStyle"
+            )
+        } else {
+            val text = (extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+                ?: extras.getCharSequence(Notification.EXTRA_TEXT))?.toString().orEmpty()
+            ExtractedContent(
+                sender = title,
+                text = text,
+                timestamp = sbn.postTime,
+                source = "topLevelExtras"
+            )
+        }
+    }
+
+    private data class ExtractedContent(
+        val sender: String,
+        val text: String,
+        val timestamp: Long,
+        val source: String
+    )
 
     companion object {
         private const val TAG = "ActionBoxListener"
