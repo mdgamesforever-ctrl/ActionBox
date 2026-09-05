@@ -117,7 +117,22 @@ class CapturedNotificationListenerService : NotificationListenerService() {
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
 
         val messagingStyle = NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(sbn.notification)
-        val latestMessage = messagingStyle?.messages?.lastOrNull()
+        val messages = messagingStyle?.messages.orEmpty()
+
+        // TEMPORARY: dumps every message this notification instance currently reports, in
+        // list order, with its own timestamp. If sending 3 messages a few seconds apart
+        // shows this list NOT growing/advancing (e.g. always 1 entry, or entries with a
+        // timestamp that never changes), the bug is upstream of selection (extraction or
+        // the source app itself) rather than which entry we pick.
+        messages.forEachIndexed { index, message ->
+            Log.d(TAG, "  messagingStyle[$index]: text=${message.text} timestamp=${message.timestamp}")
+        }
+
+        // Select by max timestamp rather than trusting list position (first/last) — this
+        // is correct regardless of which order the underlying platform/OEM happens to
+        // return the list in, since "most recent" is defined by the message's own
+        // timestamp, not where it sits in the list.
+        val latestMessage = messages.maxByOrNull { it.timestamp }
 
         return if (latestMessage != null) {
             ExtractedContent(
