@@ -42,6 +42,15 @@ class CapturedNotificationListenerService : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
 
+        // TEMPORARY: confirms whether Android calls this callback more than once for what
+        // looks like the same message, and whether repeat calls carry the same or a
+        // different sbn.key. Remove once WhatsApp duplicate captures are confirmed fixed.
+        Log.d(
+            TAG,
+            "onNotificationPosted: key=${sbn.key} pkg=${sbn.packageName} id=${sbn.id} " +
+                "tag=${sbn.tag} postTime=${sbn.postTime} isOngoing=${sbn.isOngoing}"
+        )
+
         val packageName = sbn.packageName
         if (packageName == applicationContext.packageName) {
             // Don't capture our own notifications.

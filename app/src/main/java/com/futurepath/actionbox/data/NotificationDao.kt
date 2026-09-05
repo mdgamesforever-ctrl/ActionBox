@@ -27,4 +27,21 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM captured_notifications")
     suspend fun count(): Int
+
+    /**
+     * Fallback dedup for when Android assigns two different StatusBarNotification keys to
+     * what is really the same message (observed with WhatsApp). Only looks at the single
+     * most recent row for this exact sourceApp/sender/text combination, so a message with
+     * identical text sent again hours later is unaffected — only the immediately preceding
+     * capture of the same content is considered.
+     */
+    @Query(
+        """
+        SELECT timestamp FROM captured_notifications
+        WHERE sourceApp = :sourceApp AND sender = :sender AND text = :text
+        ORDER BY timestamp DESC
+        LIMIT 1
+        """
+    )
+    suspend fun mostRecentTimestampFor(sourceApp: String, sender: String, text: String): Long?
 }
