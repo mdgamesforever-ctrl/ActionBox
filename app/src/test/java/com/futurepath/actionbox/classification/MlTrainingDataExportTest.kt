@@ -15,24 +15,53 @@ import java.io.File
  */
 class MlTrainingDataExportTest {
 
-    private fun export(cases: List<SyntheticNotificationCorpus.Case>, path: String) {
+    private fun export(cases: List<SyntheticNotificationCorpus.Case>, path: String, source: String) {
         val sb = StringBuilder()
-        sb.appendLine("templateIndex\tlabel\tsourceApp\tsender\tnormalizedText")
+        sb.appendLine("templateIndex\tlabel\tsourceApp\tsender\tsource\tnormalizedText")
         for (case in cases) {
             val normalized = TextNormalizer.normalize(case.text)
             // Tabs/newlines can't appear in this corpus's generated text, so no escaping needed.
-            sb.appendLine("${case.templateIndex}\t${case.expected}\t${case.sourceApp}\t${case.sender}\t$normalized")
+            sb.appendLine("${case.templateIndex}\t${case.expected}\t${case.sourceApp}\t${case.sender}\t$source\t$normalized")
         }
         File(path).apply {
             parentFile?.mkdirs()
             writeText(sb.toString())
         }
-        println("Exported ${cases.size} examples to $path")
+        println("Exported ${cases.size} ($source) examples to $path")
     }
 
+    /**
+     * Combines both corpora for training: [SyntheticNotificationCorpus] (template+substitution
+     * style, 122 templates) and [DiverseNotificationCorpus] (246 independently-written
+     * sentences — see that file's doc for why it exists). Diverse's templateIndex values are
+     * offset past Synthetic's so the two corpora's template groups never collide when the
+     * Python training script groups rows by template for held-out evaluation. The `source`
+     * column lets that script balance each source's total training weight (see its doc) —
+     * without it, the templated corpus's much higher row count per structure would still
+     * dominate the loss even with 246 diverse structures present, undermining the point of
+     * adding them.
+     */
     @Test
     fun exportNormalizedCorpus() {
-        export(SyntheticNotificationCorpus.buildCorpus(), "build/ml-training-data.tsv")
+        val templateIndexOffset = SyntheticNotificationCorpus.templates.size
+        val synthetic = SyntheticNotificationCorpus.buildCorpus()
+        val diverse = DiverseNotificationCorpus.buildCorpus()
+            .map { it.copy(templateIndex = it.templateIndex + templateIndexOffset) }
+
+        val sb = StringBuilder()
+        sb.appendLine("templateIndex\tlabel\tsourceApp\tsender\tsource\tnormalizedText")
+        for ((cases, source) in listOf(synthetic to "synthetic", diverse to "diverse")) {
+            for (case in cases) {
+                val normalized = TextNormalizer.normalize(case.text)
+                sb.appendLine("${case.templateIndex}\t${case.expected}\t${case.sourceApp}\t${case.sender}\t$source\t$normalized")
+            }
+        }
+        File("build/ml-training-data.tsv").apply {
+            parentFile?.mkdirs()
+            writeText(sb.toString())
+        }
+        println("Exported ${synthetic.size} synthetic + ${diverse.size} diverse = " +
+            "${synthetic.size + diverse.size} examples to build/ml-training-data.tsv")
     }
 
     /**
@@ -43,6 +72,6 @@ class MlTrainingDataExportTest {
      */
     @Test
     fun exportPhase2BenchmarkCorpus() {
-        export(SyntheticNotificationCorpus.buildPhase2Corpus(), "build/phase2-benchmark-corpus.tsv")
+        export(SyntheticNotificationCorpus.buildPhase2Corpus(), "build/phase2-benchmark-corpus.tsv", source = "synthetic")
     }
 }

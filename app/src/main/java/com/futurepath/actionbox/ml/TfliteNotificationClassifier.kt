@@ -18,15 +18,27 @@ import java.nio.channels.FileChannel
  * call is made or possible; everything runs from a model file bundled in the APK's assets.
  *
  * The model currently shipped ([MODEL_ASSET_PATH]) is a multinomial logistic regression
- * (softmax regression) trained on the Phase 2 synthetic notification corpus (2928 examples
- * across 122 sentence templates — see tools/train_and_export_tflite_model.py and
- * SyntheticNotificationCorpus.kt), evaluated at 82.83% accuracy on a held-out set of entirely
- * unseen phrasing (i.e. whole templates never seen during training, not just unseen
- * name/day/amount substitutions — see that script's held-out reporting for the harder,
- * row-level-leakage-free methodology and per-category breakdown). No real corrected examples
- * from actual usage were available to train on: this was built in a sandbox with no connected
- * device or user data, so retraining on real corrections once they exist is expected future
- * work. Its output is not surfaced in the UI yet; see
+ * (softmax regression) trained on 1734 examples spanning 368 distinct sentence structures —
+ * 122 template+substitution structures from SyntheticNotificationCorpus.kt plus 246
+ * independently-written ones from DiverseNotificationCorpus.kt (typos, fragments, emoji,
+ * 2-4 word micro-messages, and rambling multi-clause messages, added specifically because the
+ * templated corpus alone caused the model to memorize sentence structures rather than
+ * generalize) — see tools/train_and_export_tflite_model.py.
+ *
+ * **Held-out accuracy on entirely unseen phrasing: 63.79%, meaningfully BELOW the rule-based
+ * classifier's 94.68% on the same-style benchmark.** This is the honest generalization number
+ * (whole sentence structures excluded from training, not just substituted names/days/amounts —
+ * see that script's held-out reporting for the full per-category breakdown and methodology).
+ * Report this number, not any row-level or training-set-fit figure the script also prints,
+ * when describing this model's real-world accuracy — those read far higher purely from
+ * leaked/memorized phrasing. Given this gap, the ML path should be treated as a smaller
+ * supporting signal alongside the rule engine, not a replacement for it, until either a more
+ * expressive model (e.g. subword/character features, which a pure hashed-word-bag model
+ * fundamentally lacks) or real corrected examples from actual usage close it.
+ *
+ * No real corrected examples from actual usage were available to train on: this was built in
+ * a sandbox with no connected device or user data, so retraining on real corrections once they
+ * exist is expected future work. Its output is not surfaced in the UI yet; see
  * [com.futurepath.actionbox.data.NotificationRepository] for how its output is currently
  * recorded (into `mlClassifiedState`/`mlConfidence`) purely for comparison against the
  * rule-based classifier and user corrections, the same way `correctedState` already is.

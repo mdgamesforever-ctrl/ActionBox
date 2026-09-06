@@ -11,17 +11,20 @@ package com.futurepath.actionbox.classification
  * cosmetically (see [fill]'s per-slot step sizes, chosen so the combined substitution pattern
  * doesn't repeat for 420 variants).
  *
- * [Template.variants] was raised from Phase 2's original 12 to 24 for Phase 4's ML training
- * per the "expand it further... for training data volume" instruction, and 28 new templates
- * were added to the WAITING/FYI/NOISE categories (94 -> 122 templates total, 2928 examples) —
- * an early training run showed those three categories generalizing far worse than
- * ACTION/REPLY/DEADLINE to phrasing the model hadn't seen during training, and they were also
- * the three categories with the fewest distinct templates to begin with (14/15/12 vs.
- * ACTION's 23), so more DISTINCT phrasing rather than more variants of the same phrasing was
- * the fix (see tools/train_and_export_tflite_model.py's template-holdout report). The
- * rule-based NotificationClassifier's accuracy numbers reported by
- * [NotificationClassifierCorpusTest] will shift as a result of both changes (more templates,
- * more examples per template), which is expected and doesn't change either of the two accepted
+ * History: [Template.variants] was raised from Phase 2's original 12 to 24, and 28 templates
+ * were added to WAITING/FYI/NOISE (94 -> 122 templates), for an earlier ML training round —
+ * those three categories were generalizing worse than ACTION/REPLY/DEADLINE and also had the
+ * fewest distinct templates to begin with. That still only reached 82.83% template-holdout
+ * accuracy (vs. the rule engine's 94.68%), because more VARIANTS of the same ~120 sentence
+ * *structures* isn't the same as more structural diversity — it just multiplies rows that
+ * differ only in a substituted name/day/amount. variants was brought back down to 12 (exactly
+ * what the 94 original templates need to keep reproducing Phase 2's benchmark corpus) once
+ * [DiverseNotificationCorpus] — genuinely distinct sentence structures, not substitution
+ * variants of these ones — became the primary source of training diversity instead.
+ *
+ * The rule-based NotificationClassifier's accuracy numbers reported by
+ * [NotificationClassifierCorpusTest] will shift as a result of these changes (this corpus's
+ * total size changed), which is expected and doesn't change either of the two accepted
  * ambiguity clusters from Phase 2.
  */
 object SyntheticNotificationCorpus {
@@ -47,22 +50,24 @@ object SyntheticNotificationCorpus {
     )
 
     // ---- Substitution value pools ----------------------------------------------------
+    // internal (not private): DiverseNotificationCorpus reuses these and [fill] rather than
+    // duplicating substitution logic, so both corpora stay consistent.
 
-    private val NAMES = listOf(
+    internal val NAMES = listOf(
         "Priya", "Sam", "Jordan", "Taylor", "Morgan", "Chris", "Dana", "Jamie", "Robin",
         "Casey", "Riley", "Quinn", "Avery", "Sasha", "Alex"
     )
-    private val DAYS = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-    private val TIMES = listOf("9am", "10:30am", "noon", "2pm", "5pm", "6:45pm")
-    private val AMOUNTS = listOf("$45.00", "$120.50", "$9.99", "$1,200.00", "$76.25", "$18.30")
-    private val ITEMS = listOf(
+    internal val DAYS = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+    internal val TIMES = listOf("9am", "10:30am", "noon", "2pm", "5pm", "6:45pm")
+    internal val AMOUNTS = listOf("$45.00", "$120.50", "$9.99", "$1,200.00", "$76.25", "$18.30")
+    internal val ITEMS = listOf(
         "the report", "the invoice", "the package", "the contract", "the presentation",
         "the form", "the payment", "the file", "the document", "the order"
     )
-    private val CODES = listOf("482911", "017234", "993051", "126480")
-    private val PERCENTS = listOf("30", "50", "70", "25")
+    internal val CODES = listOf("482911", "017234", "993051", "126480")
+    internal val PERCENTS = listOf("30", "50", "70", "25")
 
-    private fun fill(template: String, i: Int): String = template
+    internal fun fill(template: String, i: Int): String = template
         .replace("{name}", NAMES[i % NAMES.size])
         .replace("{day}", DAYS[(i * 3 + 1) % DAYS.size])
         .replace("{time}", TIMES[(i * 5 + 2) % TIMES.size])
@@ -73,27 +78,33 @@ object SyntheticNotificationCorpus {
 
     // ---- App packages ------------------------------------------------------------------
 
-    private val WHATSAPP = "com.whatsapp"
-    private val SMS = "com.google.android.apps.messaging"
-    private val GMAIL = "com.google.android.gm"
-    private val BANK = "com.examplebank.mobile"
-    private val AMAZON = "com.amazon.mShop.android.shopping"
-    private val DOORDASH = "com.dd.doordash"
-    private val CALENDAR = "com.google.android.calendar"
-    private val YOUTUBE = "com.google.android.youtube"
-    private val INSTAGRAM = "com.instagram.android"
-    private val TWITTER = "com.twitter.android"
-    private val FACEBOOK = "com.facebook.katana"
-    private val PINTEREST = "com.pinterest"
-    private val TIKTOK = "com.zhiliaoapp.musically"
-    private val GAME = "com.example.gameapp"
+    internal val WHATSAPP = "com.whatsapp"
+    internal val SMS = "com.google.android.apps.messaging"
+    internal val GMAIL = "com.google.android.gm"
+    internal val BANK = "com.examplebank.mobile"
+    internal val AMAZON = "com.amazon.mShop.android.shopping"
+    internal val DOORDASH = "com.dd.doordash"
+    internal val CALENDAR = "com.google.android.calendar"
+    internal val YOUTUBE = "com.google.android.youtube"
+    internal val INSTAGRAM = "com.instagram.android"
+    internal val TWITTER = "com.twitter.android"
+    internal val FACEBOOK = "com.facebook.katana"
+    internal val PINTEREST = "com.pinterest"
+    internal val TIKTOK = "com.zhiliaoapp.musically"
+    internal val GAME = "com.example.gameapp"
 
     data class Template(
         val text: String,
         val expected: ClassifiedState,
         val sourceApp: String,
         val senders: List<String>,
-        val variants: Int = 24,
+        // 12 (not Phase 4's earlier 24) so this template-and-variant style of data no longer
+        // dominates the dataset by sheer repetition of the same underlying sentence structure
+        // — see DiverseNotificationCorpus, added because that repetition was exactly what
+        // caused the model to memorize rather than generalize (82.83% template-holdout vs.
+        // the rule engine's 94.68%). 12 is also exactly what the original 94 templates need to
+        // keep reproducing Phase 2's 1128-example benchmark corpus.
+        val variants: Int = 12,
         val isPhase2Original: Boolean = true
     )
 
