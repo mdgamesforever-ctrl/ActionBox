@@ -41,6 +41,12 @@ android {
     buildFeatures {
         compose = true
     }
+
+    androidResources {
+        // .tflite must stay uncompressed in the APK so Interpreter can mmap() it directly
+        // from assets rather than needing to copy/inflate it to a temp file at runtime.
+        noCompress += "tflite"
+    }
 }
 
 dependencies {
@@ -67,6 +73,12 @@ dependencies {
 
     // Kotlin coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // On-device ML classification (see ml/TfliteNotificationClassifier.kt). Raw Interpreter
+    // API only, not the Task/Support Library — the model takes a plain fixed-size float
+    // vector rather than raw text needing built-in tokenization, so those extra helpers would
+    // just be unused footprint.
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

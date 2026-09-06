@@ -46,6 +46,11 @@ interface NotificationDao {
     @Query("UPDATE captured_notifications SET correctedState = :state WHERE id = :id")
     suspend fun updateCorrectedState(id: Long, state: ClassifiedState)
 
+    // See NotificationEntity.mlClassifiedState — recorded for comparison only, doesn't touch
+    // classifiedState/correctedState.
+    @Query("UPDATE captured_notifications SET mlClassifiedState = :state, mlConfidence = :confidence WHERE id = :id")
+    suspend fun updateMlClassification(id: Long, state: ClassifiedState, confidence: Int)
+
     @Query(
         """
         SELECT * FROM captured_notifications

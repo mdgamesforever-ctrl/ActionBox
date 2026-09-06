@@ -1,16 +1,19 @@
 package com.futurepath.actionbox.data
 
 import android.content.Context
+import android.util.Log
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.CorrectionLearning
 import com.futurepath.actionbox.classification.NotificationClassifier
 import com.futurepath.actionbox.classification.TextNormalizer
+import com.futurepath.actionbox.ml.TfliteNotificationClassifier
 import kotlinx.coroutines.flow.Flow
 
 class NotificationRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).notificationDao()
     private val learningDao = AppDatabase.getInstance(context).learningPatternDao()
+    private val tfliteClassifier = TfliteNotificationClassifier(context.applicationContext)
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
@@ -53,6 +56,23 @@ class NotificationRepository(context: Context) {
                 date = classification.date,
                 confidence = classification.confidence
             )
+
+            // On-device ML path, recorded alongside the rule-based result for future
+            // comparison only — see TfliteNotificationClassifier's doc. Never lets a model
+            // problem (missing/corrupt asset, native library failure) affect the capture
+            // itself: classify() already degrades to null internally, so this is just belt-
+            // and-suspenders against anything else unexpected the ML path might throw.
+            try {
+                tfliteClassifier.classify(normalizedText)?.let { mlResult ->
+                    dao.updateMlClassification(
+                        id = result.insertedRowId,
+                        state = mlResult.state,
+                        confidence = mlResult.confidence
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "On-device ML classification path failed; capture is unaffected", e)
+            }
         }
     }
 
@@ -94,6 +114,8 @@ class NotificationRepository(context: Context) {
     }
 
     companion object {
+        private const val TAG = "NotificationRepository"
+
         // Covers the gap between a message's own MessagingStyle timestamp and the device
         // notification post time used when a second, plain-text posting of the same event
         // has no MessagingStyle data (observed gap in testing: ~2.5s). Short enough that an

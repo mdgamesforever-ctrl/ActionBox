@@ -47,5 +47,12 @@ data class NotificationEntity(
     // User-supplied override from the feed's category picker. classifiedState is left
     // untouched so the classifier's original pick and the user's correction can be
     // compared later (e.g. to measure real-world accuracy or retrain heuristics).
-    val correctedState: ClassifiedState? = null
+    val correctedState: ClassifiedState? = null,
+    // Set by TfliteNotificationClassifier alongside classifiedState, when the on-device ML
+    // model loaded successfully. Currently a placeholder/untrained model (see that class's
+    // doc) — recorded purely for future comparison against classifiedState/correctedState,
+    // not shown in the UI or used for any decision yet. Null if ML classification is
+    // unavailable or failed for this notification.
+    val mlClassifiedState: ClassifiedState? = null,
+    val mlConfidence: Int? = null
 )
