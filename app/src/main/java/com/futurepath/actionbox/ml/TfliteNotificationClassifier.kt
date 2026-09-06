@@ -52,8 +52,9 @@ import java.nio.channels.FileChannel
  *    NOISE).
  *
  * Construction never throws: if the model asset is missing, corrupt, or the native TFLite
- * library fails to load on a given device, this degrades to a no-op (every [classify] call
- * returns null) rather than crashing the notification listener service that owns the caller.
+ * library fails to load on a given device, this degrades to a no-op (every [classify]/
+ * [classifyDistribution] call returns null) rather than crashing the notification listener
+ * service that owns the caller.
  */
 class TfliteNotificationClassifier(context: Context) {
 
@@ -65,8 +66,14 @@ class TfliteNotificationClassifier(context: Context) {
         null
     }
 
-    /** Null if the model failed to load, or if inference itself fails for this input. */
-    suspend fun classify(normalizedText: String): ClassificationResult? {
+    /**
+     * The raw softmax distribution over all 6 categories (summing to ~1.0), keyed by
+     * [ClassifiedState] — what [com.futurepath.actionbox.classification.HybridClassifier]
+     * blends into the rule engine's score rather than just the single argmax [classify]
+     * returns, since a proportional blend needs to know how the model split its probability
+     * mass, not just which category won. Null if the model is unavailable or inference fails.
+     */
+    suspend fun classifyDistribution(normalizedText: String): Map<ClassifiedState, Float>? {
         val interpreter = interpreter ?: return null
         val input = arrayOf(HashedTextVectorizer.vectorize(normalizedText))
         val output = Array(1) { FloatArray(CATEGORY_ORDER.size) }
@@ -75,18 +82,30 @@ class TfliteNotificationClassifier(context: Context) {
             // Interpreter.run() is not safe to call concurrently on the same instance; capture()
             // can run from multiple coroutines for near-simultaneous notifications.
             mutex.withLock { interpreter.run(input, output) }
-            val probabilities = output[0]
-            val winnerIndex = probabilities.indices.maxByOrNull { probabilities[it] } ?: return null
-            ClassificationResult(
-                state = CATEGORY_ORDER[winnerIndex],
-                summary = null,
-                date = null,
-                confidence = (probabilities[winnerIndex] * 100).toInt().coerceIn(0, 100)
-            )
+            CATEGORY_ORDER.indices.associate { CATEGORY_ORDER[it] to output[0][it] }
         } catch (e: Exception) {
             Log.w(TAG, "On-device ML inference failed", e)
             null
         }
+    }
+
+    /**
+     * The model's single top pick, for recording alongside the rule engine's/hybrid's result
+     * for comparison (see `mlClassifiedState`/`mlConfidence` in
+     * [com.futurepath.actionbox.data.NotificationRepository]) — not what
+     * [com.futurepath.actionbox.classification.HybridClassifier] uses, which needs the full
+     * distribution from [classifyDistribution] instead. Null under the same conditions as that
+     * method.
+     */
+    suspend fun classify(normalizedText: String): ClassificationResult? {
+        val probabilities = classifyDistribution(normalizedText) ?: return null
+        val (winnerState, winnerProbability) = probabilities.maxByOrNull { it.value } ?: return null
+        return ClassificationResult(
+            state = winnerState,
+            summary = null,
+            date = null,
+            confidence = (winnerProbability * 100).toInt().coerceIn(0, 100)
+        )
     }
 
     fun close() {

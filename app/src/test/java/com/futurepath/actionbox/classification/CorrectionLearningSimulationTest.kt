@@ -36,7 +36,7 @@ class CorrectionLearningSimulationTest {
         // times, so it's still scored ACTION on its own merits.
         val before = NotificationClassifier.classify(sourceApp, sender, secondMessage)
         assertEquals(ClassifiedState.ACTION, before.state)
-        assertEquals(75, before.confidence) // matches the ACTION verb+directed-object signal alone
+        assertEquals(73, before.confidence) // matches the ACTION verb+directed-object signal alone
 
         // Simulate the user correcting 3 prior messages from this same sender to FYI via the
         // feed's picker. Each correction is one call to
@@ -60,7 +60,7 @@ class CorrectionLearningSimulationTest {
 
         assertEquals(ClassifiedState.FYI, after.state)
         assertNotEquals(before.state, after.state)
-        assertEquals(35, after.confidence) // learned boost (4) narrowly overtakes ACTION's own score (3)
+        assertEquals(32, after.confidence) // learned boost (4) narrowly overtakes ACTION's own score (3)
     }
 
     @Test

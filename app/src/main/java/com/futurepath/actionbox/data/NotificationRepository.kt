@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.CorrectionLearning
-import com.futurepath.actionbox.classification.NotificationClassifier
+import com.futurepath.actionbox.classification.HybridClassifier
 import com.futurepath.actionbox.classification.TextNormalizer
 import com.futurepath.actionbox.ml.TfliteNotificationClassifier
 import kotlinx.coroutines.flow.Flow
@@ -48,7 +48,23 @@ class NotificationRepository(context: Context) {
 
         if (result.insertedRowId != -1L) {
             val boosts = learningBoostsFor(sourceApp, sender, normalizedText)
-            val classification = NotificationClassifier.classify(sourceApp, sender, normalizedText, boosts)
+
+            // Fetched once and used both to blend into the hybrid decision below and to
+            // record the ML-alone prediction for comparison, so a single notification never
+            // runs the interpreter twice. Never lets a model problem (missing/corrupt asset,
+            // native library failure) affect capture: classifyDistribution() already degrades
+            // to null internally, and this try/catch is belt-and-suspenders against anything
+            // else unexpected the ML path might throw — HybridClassifier.classify treats null
+            // as "no ML signal" and falls back to the rule engine/correction-learning score
+            // alone, unchanged from prior phases' behavior.
+            val mlProbabilities = try {
+                tfliteClassifier.classifyDistribution(normalizedText)
+            } catch (e: Exception) {
+                Log.w(TAG, "On-device ML classification path failed; hybrid falls back to rule engine alone", e)
+                null
+            }
+
+            val classification = HybridClassifier.classify(sourceApp, sender, normalizedText, boosts, mlProbabilities)
             dao.updateClassification(
                 id = result.insertedRowId,
                 state = classification.state,
@@ -57,21 +73,15 @@ class NotificationRepository(context: Context) {
                 confidence = classification.confidence
             )
 
-            // On-device ML path, recorded alongside the rule-based result for future
-            // comparison only — see TfliteNotificationClassifier's doc. Never lets a model
-            // problem (missing/corrupt asset, native library failure) affect the capture
-            // itself: classify() already degrades to null internally, so this is just belt-
-            // and-suspenders against anything else unexpected the ML path might throw.
-            try {
-                tfliteClassifier.classify(normalizedText)?.let { mlResult ->
-                    dao.updateMlClassification(
-                        id = result.insertedRowId,
-                        state = mlResult.state,
-                        confidence = mlResult.confidence
-                    )
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "On-device ML classification path failed; capture is unaffected", e)
+            // The ML model's own top pick, recorded separately from the hybrid decision above
+            // purely for ongoing comparison against classifiedState/correctedState — see
+            // NotificationEntity.mlClassifiedState.
+            mlProbabilities?.maxByOrNull { it.value }?.let { (state, probability) ->
+                dao.updateMlClassification(
+                    id = result.insertedRowId,
+                    state = state,
+                    confidence = (probability * 100).toInt().coerceIn(0, 100)
+                )
             }
         }
     }

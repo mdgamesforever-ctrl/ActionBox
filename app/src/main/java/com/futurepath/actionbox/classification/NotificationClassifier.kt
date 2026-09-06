@@ -25,6 +25,11 @@ object NotificationClassifier {
      * sender/app/phrase has been consistently corrected to before. Empty by default so this
      * stays a pure function of its text inputs wherever no learning history applies (all
      * existing callers/tests included).
+     *
+     * This is the rule-engine-only decision (plus correction-learning boosts) — for the
+     * Phase 5 hybrid decision that also folds in the on-device ML model's prediction, see
+     * [HybridClassifier.classify], which calls [scoreCategories] and [resultFromScores]
+     * directly rather than this function.
      */
     fun classify(
         sourceApp: String,
@@ -32,8 +37,23 @@ object NotificationClassifier {
         text: String,
         learningBoosts: Map<ClassifiedState, Int> = emptyMap()
     ): ClassificationResult {
-        val lowerText = text.lowercase()
+        val scores = scoreCategories(sourceApp, sender, text, learningBoosts)
+        return resultFromScores(scores.mapValues { it.value.toFloat() }, text, sender)
+    }
 
+    /**
+     * The rule engine's per-category scores, with correction-learning boosts already folded
+     * in — exposed (rather than just the winner+confidence [classify] derives from them) so
+     * [HybridClassifier] can blend them with the on-device ML model's prediction before a
+     * winner is picked. See [classify] for [learningBoosts].
+     */
+    internal fun scoreCategories(
+        sourceApp: String,
+        sender: String,
+        text: String,
+        learningBoosts: Map<ClassifiedState, Int> = emptyMap()
+    ): Map<ClassifiedState, Int> {
+        val lowerText = text.lowercase()
         val baseScores = mapOf(
             ClassifiedState.NOISE to scoreNoise(sourceApp, lowerText),
             ClassifiedState.FYI to score(lowerText, FYI_PATTERNS),
@@ -42,8 +62,17 @@ object NotificationClassifier {
             ClassifiedState.WAITING to score(lowerText, WAITING_PATTERNS),
             ClassifiedState.REPLY to score(lowerText, REPLY_PATTERNS)
         )
-        val scores = baseScores.mapValues { (state, score) -> score + (learningBoosts[state] ?: 0) }
+        return baseScores.mapValues { (state, score) -> score + (learningBoosts[state] ?: 0) }
+    }
 
+    /**
+     * Turns a per-category score map — [scoreCategories]'s rule-engine-only scores (promoted
+     * to Float), or [HybridClassifier]'s blend of those with the ML model's prediction — into
+     * a final decision: winner, confidence, and (for the actionable categories) an extracted
+     * summary/date. Factored out of [classify] so both callers apply the exact same
+     * tie-break/confidence/extraction rules no matter where the scores came from.
+     */
+    internal fun resultFromScores(scores: Map<ClassifiedState, Float>, text: String, sender: String): ClassificationResult {
         val topScore = scores.values.max()
         // Among categories tied for the top score, prefer the more actionable/urgent one —
         // a message that's plausibly both a deadline and an FYI is more useful surfaced as
@@ -52,7 +81,7 @@ object NotificationClassifier {
         // category scores 0, this arbitrarily lands on NOISE, but confidence will be 0 too
         // (below the LOW threshold), so the fallback below always overrides it to FYI.
         val winner = TIE_BREAK_ORDER.first { scores[it] == topScore }
-        val runnerUpScore = scores.filterKeys { it != winner }.values.maxOrNull() ?: 0
+        val runnerUpScore = scores.filterKeys { it != winner }.values.maxOrNull() ?: 0f
         val confidence = computeConfidence(topScore, runnerUpScore)
 
         val date = extractDate(text)
@@ -70,7 +99,7 @@ object NotificationClassifier {
         // categories were close discarded correct classifications in testing. The confidence
         // score is still reported as computed either way, so the UI can flag a low-confidence
         // pick as needing review without erasing what the classifier actually found.
-        val finalState = if (topScore <= 0) ClassifiedState.FYI else winner
+        val finalState = if (topScore <= 0f) ClassifiedState.FYI else winner
         return ClassificationResult(finalState, summary, date, confidence)
     }
 
@@ -80,11 +109,21 @@ object NotificationClassifier {
      * score relative to [STRENGTH_CAP] (a lone weak match shouldn't score as confidently as
      * a cluster of strong ones, even with zero competition). Margin is weighted higher
      * since "is this actually the right category" matters more than "how much evidence."
+     *
+     * Operates on whatever scale it's handed — plain rule-engine scores from
+     * [scoreCategories], or [HybridClassifier]'s blended scores (which can run up to
+     * [HybridClassifier.ML_WEIGHT] points higher when the ML model reinforces an already
+     * strong rule-engine pick — [STRENGTH_CAP] was raised from 8 to 9 for Phase 5 to keep
+     * that higher ceiling from saturating the strength component too readily). When the ML
+     * model instead disagrees with the rule engine, its contribution goes to a different
+     * category, which narrows — not widens — the winner's margin over the runner-up, so a
+     * genuine disagreement between the two signals correctly lowers confidence rather than
+     * being invisible to it.
      */
-    private fun computeConfidence(winnerScore: Int, runnerUpScore: Int): Int {
-        if (winnerScore <= 0) return 0
-        val marginRatio = (winnerScore - runnerUpScore).toFloat() / winnerScore
-        val strengthRatio = (winnerScore.toFloat() / STRENGTH_CAP).coerceAtMost(1f)
+    private fun computeConfidence(winnerScore: Float, runnerUpScore: Float): Int {
+        if (winnerScore <= 0f) return 0
+        val marginRatio = (winnerScore - runnerUpScore) / winnerScore
+        val strengthRatio = (winnerScore / STRENGTH_CAP).coerceAtMost(1f)
         val raw = 100 * (MARGIN_WEIGHT * marginRatio + STRENGTH_WEIGHT * strengthRatio)
         return raw.toInt().coerceIn(0, 100)
     }
@@ -187,7 +226,7 @@ object NotificationClassifier {
     private const val ACTION_VERB_WEIGHT = 2
     private const val ACTION_DIRECTED_BONUS = 1
     private const val ACTION_REQUEST_MARKER_BONUS = 2
-    private const val STRENGTH_CAP = 8f
+    private const val STRENGTH_CAP = 9f // was 8 pre-Phase 5; see computeConfidence's doc
     private const val MARGIN_WEIGHT = 0.6f
     private const val STRENGTH_WEIGHT = 0.4f
 
