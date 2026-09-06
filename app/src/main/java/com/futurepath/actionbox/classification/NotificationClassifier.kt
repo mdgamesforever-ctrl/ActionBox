@@ -95,8 +95,18 @@ object NotificationClassifier {
         val dueMatches = DUE_PATTERNS.count { it.containsMatchIn(lowerText) } +
             (if (BY_DEADLINE_PATTERN.containsMatchIn(lowerText)) 1 else 0)
         val dateMatches = DEADLINE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+
+        if (dueMatches == 0) {
+            // A bare day name/relative phrase with no due/expiry language is a weak signal
+            // on its own — ordinary sentences mention days constantly without implying a
+            // deadline ("are you free on Tuesday?", "meeting moved to Tuesday", "booking
+            // confirmed for Tuesday"). Score low enough that it can never tie with, let
+            // alone beat, a specific phrase match belonging to another category.
+            return dateMatches * STANDALONE_DATE_WEIGHT
+        }
+
         var total = dueMatches * DUE_WEIGHT + dateMatches * DATE_WEIGHT
-        if (dueMatches > 0 && dateMatches > 0) total += COMBO_BONUS
+        if (dateMatches > 0) total += COMBO_BONUS
         return total
     }
 
@@ -158,6 +168,7 @@ object NotificationClassifier {
     private const val NOISE_PACKAGE_WEIGHT = 10
     private const val DUE_WEIGHT = 2
     private const val DATE_WEIGHT = 2
+    private const val STANDALONE_DATE_WEIGHT = 1
     private const val COMBO_BONUS = 3
     private const val ACTION_VERB_WEIGHT = 2
     private const val ACTION_DIRECTED_BONUS = 1
@@ -236,14 +247,27 @@ object NotificationClassifier {
     private val ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = mapOf(
         "call" to Regex("\\bcall me\\b"),
         "check" to Regex("\\bi'll check\\b"),
-        "confirm" to Regex("\\bcan you confirm\\b")
+        // Only suppress when confirming something about the recipient themselves (receipt,
+        // attendance, agreement — "confirm you received/got/are coming"), which is a REPLY-
+        // style acknowledgment request. "Confirm the details/report/numbers" is confirming
+        // a deliverable, a genuine ACTION request, and must NOT be suppressed — narrowed
+        // after the broader "any 'can you confirm'" version incorrectly pulled those into
+        // REPLY.
+        "confirm" to Regex("\\bcan you confirm you\\b"),
+        "bring" to Regex("\\bi(?:'ll| will) bring\\b")
     )
 
     private val REQUEST_MARKERS = phrases("can you", "could you", "would you", "need you to")
 
     private val WAITING_PATTERNS = phrases(
-        "i'll send", "i will", "i'll check", "i'll get back to you", "expect it",
-        "should arrive", "we're working on it", "i'll bring it",
+        "i'll send", "i will", "i'll check", "i'll get back to you",
+        // Generalized from the object-literal "expect it"/"i'll bring it", which only
+        // matched when the object was literally "it" and missed "expect the file"/"i'll
+        // bring the presentation" — these match the verb+commitment structure regardless
+        // of what's being expected/brought, consistent with how "i'll send"/"i'll check"
+        // already don't require a specific object.
+        "should expect", "i'll bring",
+        "should arrive", "we're working on it", "i'm working on", "i am working on",
         "on it", "will do", "will send", "will get back", "will reply"
     )
 
