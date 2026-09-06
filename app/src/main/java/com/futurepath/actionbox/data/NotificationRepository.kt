@@ -25,65 +25,51 @@ class NotificationRepository(context: Context) {
     }
 
     /**
-     * Dedup has two layers:
-     *  1. A bounded-recency content check (this method, before the insert): the same real
-     *     message can reach onNotificationPosted via two genuinely different
-     *     StatusBarNotification postings — a rich MessagingStyle one and a separate plain
-     *     compatibility one for the same event — with two different (correctly different)
-     *     notificationKeys and timestamps from two different clocks (message-own-time vs.
-     *     this device's notification post time), so they will not match exactly. Identical
-     *     text within [CROSS_SOURCE_WINDOW_MS] is treated as the same event.
-     *  2. The two unique indices on [NotificationEntity] (see [NotificationDao.insert]),
-     *     enforced atomically by the DB, catch an exact repeat (same key, or identical
-     *     content down to the same timestamp) even under concurrent calls.
-     * When either layer rejects the capture, a follow-up lookup explains *why* — which
-     * constraint matched and how long ago that row was originally captured — since "it was
-     * a duplicate" alone doesn't distinguish a genuine repeat from stale test data.
+     * Delegates the whole check-then-insert sequence to [NotificationDao.captureIfNew],
+     * which runs it as a single Room transaction so concurrent calls can't race each other
+     * (see that method's doc). Two checks run inside that transaction before the insert:
+     *  1. Bounded-recency content match: the same real message can reach
+     *     onNotificationPosted via two genuinely different StatusBarNotification postings
+     *     (rich MessagingStyle vs. plain compatibility) with two different — correctly
+     *     different — notificationKeys and timestamps from two different clocks, so an
+     *     identical-text match within [CROSS_SOURCE_WINDOW_MS] is treated as one event.
+     *  2. Same notificationKey + identical text, for a repeat outside that window. Matching
+     *     key with *different* text is never treated as a duplicate on its own — apps like
+     *     Messenger/WhatsApp reuse one key for an entire conversation thread, so key alone
+     *     doesn't identify a specific message.
+     * This method then only turns the result into a human-readable explanation.
      */
     suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long, receivedAt: Long): CaptureOutcome {
-        val recentMatch = dao.findRecentByContent(
+        val result = dao.captureIfNew(
+            notificationKey = notificationKey,
             sourceApp = sourceApp,
             sender = sender,
             text = text,
-            minTimestamp = timestamp - CROSS_SOURCE_WINDOW_MS,
-            maxTimestamp = timestamp + CROSS_SOURCE_WINDOW_MS
+            timestamp = timestamp,
+            capturedAt = receivedAt,
+            recentWindowMs = CROSS_SOURCE_WINDOW_MS
         )
-        if (recentMatch != null) {
-            return CaptureOutcome(
-                wasInserted = false,
-                conflictDetail = "matched existing row id=${recentMatch.id} by content within " +
-                    "${CROSS_SOURCE_WINDOW_MS / 1000}s (timestamp differs by ${timestamp - recentMatch.timestamp}ms, " +
-                    "likely a different extraction path for the same event), captured ${ageDescription(receivedAt - recentMatch.capturedAt)} ago"
-            )
-        }
 
-        val rowId = dao.insert(
-            NotificationEntity(
-                notificationKey = notificationKey,
-                sourceApp = sourceApp,
-                sender = sender,
-                text = text,
-                timestamp = timestamp,
-                capturedAt = receivedAt
-            )
-        )
-        if (rowId != -1L) {
+        if (result.insertedRowId != -1L) {
             return CaptureOutcome(wasInserted = true, conflictDetail = null)
         }
 
-        val byKey = dao.findByKey(notificationKey)
-        val byContent = dao.findByContent(sourceApp, sender, text, timestamp)
-        val detail = buildString {
-            byKey?.let {
-                append("matched existing row id=${it.id} by notificationKey, captured ${ageDescription(receivedAt - it.capturedAt)} ago")
-            }
-            byContent?.let {
-                if (isNotEmpty()) append("; ")
-                append("matched existing row id=${it.id} by content+timestamp, captured ${ageDescription(receivedAt - it.capturedAt)} ago")
-            }
-            if (isEmpty()) append("insert was ignored but no matching row was found")
+        val matched = result.matchedRow ?: return CaptureOutcome(
+            wasInserted = false,
+            conflictDetail = "insert was ignored but no matching row was found"
+        )
+        val reason = when (result.matchReason) {
+            "content-window" -> "matched existing row id=${matched.id} by content within " +
+                "${CROSS_SOURCE_WINDOW_MS / 1000}s (timestamp differs by ${timestamp - matched.timestamp}ms, " +
+                "likely a different extraction path for the same event)"
+            "key+text" -> "matched existing row id=${matched.id} by notificationKey + identical text"
+            "exact-content-index" -> "matched existing row id=${matched.id} by exact content+timestamp"
+            else -> "matched existing row id=${matched.id}"
         }
-        return CaptureOutcome(wasInserted = false, conflictDetail = detail)
+        return CaptureOutcome(
+            wasInserted = false,
+            conflictDetail = "$reason, captured ${ageDescription(receivedAt - matched.capturedAt)} ago"
+        )
     }
 
     private fun ageDescription(ageMs: Long): String = when {

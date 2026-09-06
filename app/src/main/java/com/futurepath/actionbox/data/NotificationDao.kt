@@ -4,23 +4,20 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+
+data class CaptureAttemptResult(
+    val insertedRowId: Long,
+    val matchedRow: NotificationEntity?,
+    val matchReason: String?
+)
 
 @Dao
 interface NotificationDao {
 
-    /**
-     * IGNORE relies on two unique indices on [NotificationEntity]:
-     *  - notificationKey: catches a repeat callback for the exact same
-     *    StatusBarNotification (same system-assigned key).
-     *  - (sourceApp, sender, text, timestamp): catches the case where Android/the source
-     *    app reposts the same logical message under a different key, but the extracted
-     *    content and message-level timestamp are identical.
-     * Both are enforced as DB constraints rather than a separate check-then-insert, so
-     * concurrent onNotificationPosted calls can't both slip past a check and both insert.
-     */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(notification: NotificationEntity): Long
+    suspend fun insertRaw(notification: NotificationEntity): Long
 
     @Query("SELECT * FROM captured_notifications ORDER BY timestamp DESC")
     fun observeAll(): Flow<List<NotificationEntity>>
@@ -30,11 +27,6 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM captured_notifications")
     fun observeCount(): Flow<Int>
-
-    // Diagnostic-only: called after an insert is ignored, to find out which constraint
-    // caused it and when that row was originally captured.
-    @Query("SELECT * FROM captured_notifications WHERE notificationKey = :notificationKey LIMIT 1")
-    suspend fun findByKey(notificationKey: String): NotificationEntity?
 
     @Query(
         """
@@ -51,8 +43,8 @@ interface NotificationDao {
      * separate plain-text compatibility notification for the same event) — different
      * notificationKey, and their timestamps come from different clocks (the message's own
      * timestamp vs. this device's notification post time), so they rarely match exactly.
-     * Matching on identical text within a short window catches this without the
-     * exact-equality unique index ever seeing it.
+     * Matching on identical text within a short window catches this without needing the
+     * exact-equality unique index to see it.
      */
     @Query(
         """
@@ -63,4 +55,66 @@ interface NotificationDao {
         """
     )
     suspend fun findRecentByContent(sourceApp: String, sender: String, text: String, minTimestamp: Long, maxTimestamp: Long): NotificationEntity?
+
+    /**
+     * Catches a repeat callback for the same conversation notification reposting identical
+     * text outside the recency window above. Deliberately requires text equality — the key
+     * alone is not unique per message for apps that reuse one key per conversation thread
+     * (see [NotificationEntity]), so a matching key with *different* text must fall through
+     * to a normal insert as a new message.
+     */
+    @Query("SELECT * FROM captured_notifications WHERE notificationKey = :notificationKey AND text = :text LIMIT 1")
+    suspend fun findByKeyAndText(notificationKey: String, text: String): NotificationEntity?
+
+    /**
+     * Runs the whole check-then-insert sequence as one Room transaction. Room serializes
+     * @Transaction suspend functions on the same database against each other (via its
+     * internal transaction executor), so two concurrent onNotificationPosted calls can no
+     * longer both pass the checks before either one's insert commits — the second call's
+     * checks only run after the first call's transaction (checks + insert) has fully
+     * completed, so it will see the first call's row.
+     */
+    @Transaction
+    suspend fun captureIfNew(
+        notificationKey: String,
+        sourceApp: String,
+        sender: String,
+        text: String,
+        timestamp: Long,
+        capturedAt: Long,
+        recentWindowMs: Long
+    ): CaptureAttemptResult {
+        findRecentByContent(
+            sourceApp = sourceApp,
+            sender = sender,
+            text = text,
+            minTimestamp = timestamp - recentWindowMs,
+            maxTimestamp = timestamp + recentWindowMs
+        )?.let {
+            return CaptureAttemptResult(insertedRowId = -1L, matchedRow = it, matchReason = "content-window")
+        }
+
+        findByKeyAndText(notificationKey, text)?.let {
+            return CaptureAttemptResult(insertedRowId = -1L, matchedRow = it, matchReason = "key+text")
+        }
+
+        val rowId = insertRaw(
+            NotificationEntity(
+                notificationKey = notificationKey,
+                sourceApp = sourceApp,
+                sender = sender,
+                text = text,
+                timestamp = timestamp,
+                capturedAt = capturedAt
+            )
+        )
+        if (rowId != -1L) {
+            return CaptureAttemptResult(insertedRowId = rowId, matchedRow = null, matchReason = null)
+        }
+
+        // Residual case: the (sourceApp, sender, text, timestamp) unique index rejected an
+        // exact repeat that both checks above missed (e.g. timestamp outside the window).
+        val byContent = findByContent(sourceApp, sender, text, timestamp)
+        return CaptureAttemptResult(insertedRowId = -1L, matchedRow = byContent, matchReason = "exact-content-index")
+    }
 }

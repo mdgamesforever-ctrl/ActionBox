@@ -7,7 +7,12 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "captured_notifications",
     indices = [
-        Index(value = ["notificationKey"], unique = true),
+        // NOT unique: apps like Messenger/WhatsApp reuse the same notificationKey for an
+        // entire conversation thread, updating it in place for every new message rather
+        // than issuing a new key per message. A unique constraint on this column alone
+        // would reject a genuinely new message just for sharing a key with an older one —
+        // this index exists only to make the key+text lookup in NotificationDao fast.
+        Index(value = ["notificationKey"]),
         // Two captures are only the same real event if they share the exact message-level
         // timestamp (from MessagingStyle when available, not device capture time) AND
         // identical text — this is what actually distinguishes two different messages
