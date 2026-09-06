@@ -3,11 +3,13 @@ package com.futurepath.actionbox.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.NotificationRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class NotificationViewModel(private val repository: NotificationRepository) : ViewModel() {
 
@@ -17,6 +19,12 @@ class NotificationViewModel(private val repository: NotificationRepository) : Vi
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+
+    fun correctClassification(id: Long, newState: ClassifiedState) {
+        viewModelScope.launch {
+            repository.correctClassification(id, newState)
+        }
+    }
 
     class Factory(private val repository: NotificationRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

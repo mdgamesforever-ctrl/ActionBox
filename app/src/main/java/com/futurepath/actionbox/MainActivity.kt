@@ -56,7 +56,10 @@ class MainActivity : ComponentActivity() {
 
                 if (hasContinuedPastOnboarding && isAccessGranted) {
                     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
-                    NotificationFeedScreen(notifications = notifications)
+                    NotificationFeedScreen(
+                        notifications = notifications,
+                        onCorrect = viewModel::correctClassification
+                    )
                 } else {
                     PermissionOnboardingScreen(
                         isAccessGranted = isAccessGranted,

@@ -43,5 +43,9 @@ data class NotificationEntity(
     val extractedSummary: String? = null,
     val extractedDate: String? = null,
     // 0-100, set alongside classifiedState. See NotificationClassifier.computeConfidence.
-    val confidenceScore: Int? = null
+    val confidenceScore: Int? = null,
+    // User-supplied override from the feed's category picker. classifiedState is left
+    // untouched so the classifier's original pick and the user's correction can be
+    // compared later (e.g. to measure real-world accuracy or retrain heuristics).
+    val correctedState: ClassifiedState? = null
 )

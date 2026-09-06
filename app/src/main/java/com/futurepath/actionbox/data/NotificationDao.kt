@@ -39,6 +39,10 @@ interface NotificationDao {
     )
     suspend fun updateClassification(id: Long, state: ClassifiedState, summary: String?, date: String?, confidence: Int)
 
+    // classifiedState is left untouched — see NotificationEntity.correctedState.
+    @Query("UPDATE captured_notifications SET correctedState = :state WHERE id = :id")
+    suspend fun updateCorrectedState(id: Long, state: ClassifiedState)
+
     @Query(
         """
         SELECT * FROM captured_notifications

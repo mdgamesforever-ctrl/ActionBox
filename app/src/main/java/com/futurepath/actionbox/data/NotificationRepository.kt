@@ -1,6 +1,7 @@
 package com.futurepath.actionbox.data
 
 import android.content.Context
+import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.NotificationClassifier
 import com.futurepath.actionbox.classification.TextNormalizer
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +51,11 @@ class NotificationRepository(context: Context) {
                 confidence = classification.confidence
             )
         }
+    }
+
+    /** User-supplied correction from the feed's category picker. See [NotificationDao.updateCorrectedState]. */
+    suspend fun correctClassification(id: Long, newState: ClassifiedState) {
+        dao.updateCorrectedState(id, newState)
     }
 
     companion object {
