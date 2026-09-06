@@ -74,4 +74,38 @@ class MlTrainingDataExportTest {
     fun exportPhase2BenchmarkCorpus() {
         export(SyntheticNotificationCorpus.buildPhase2Corpus(), "build/phase2-benchmark-corpus.tsv", source = "synthetic")
     }
+
+    /**
+     * Exports the rule engine's raw per-category scores (via
+     * [NotificationClassifier.scoreCategories], the exact same function [HybridClassifier]
+     * calls) for the same Phase 2 benchmark corpus, so tools/evaluate_hybrid_pipeline.py can
+     * blend in real ML inference using HybridClassifier's exact arithmetic without needing to
+     * reimplement the rule engine's regex scoring in Python — that would be a second copy of
+     * ~200 lines of pattern logic to keep in sync, versus reading six numbers per row here.
+     *
+     * learningBoosts is empty for every row: this is a fresh benchmark corpus with no
+     * accumulated correction history (CorrectionLearning needs 3+ consistent prior real
+     * corrections per sender/app/phrase before it contributes anything), so the
+     * correction-learning layer genuinely contributes nothing to this particular run — see
+     * that script's report for why this is stated explicitly rather than silently glossed
+     * over.
+     */
+    @Test
+    fun exportRuleEngineScoresForHybridBenchmark() {
+        val cases = SyntheticNotificationCorpus.buildPhase2Corpus()
+        val sb = StringBuilder()
+        val categories = ClassifiedState.values()
+        sb.appendLine("label\tsourceApp\tsender\tnormalizedText\t" + categories.joinToString("\t") { "score_$it" })
+        for (case in cases) {
+            val normalized = TextNormalizer.normalize(case.text)
+            val scores = NotificationClassifier.scoreCategories(case.sourceApp, case.sender, normalized, emptyMap())
+            val scoreColumns = categories.joinToString("\t") { (scores[it] ?: 0).toString() }
+            sb.appendLine("${case.expected}\t${case.sourceApp}\t${case.sender}\t$normalized\t$scoreColumns")
+        }
+        File("build/hybrid-benchmark-rule-scores.tsv").apply {
+            parentFile?.mkdirs()
+            writeText(sb.toString())
+        }
+        println("Exported ${cases.size} rule-engine-scored examples to build/hybrid-benchmark-rule-scores.tsv")
+    }
 }
