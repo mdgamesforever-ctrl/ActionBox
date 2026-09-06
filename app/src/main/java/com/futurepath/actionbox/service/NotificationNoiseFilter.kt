@@ -22,7 +22,9 @@ object NotificationNoiseFilter {
         "com.android.server.telecom",
         // OS/system utility notifications.
         "com.samsung.android.app.smartcapture", // Samsung screenshot/screen-recording capture
-        "com.android.systemui"                   // battery, USB, silent-mode, etc.
+        "com.android.systemui",                  // battery, USB, silent-mode, etc.
+        "com.android.providers.downloads",       // OS download-manager progress/complete toasts
+        "com.google.android.googlequicksearchbox" // Google app "at a glance" widgets (weather, etc.)
     )
 
     fun shouldCapture(packageName: String, notification: Notification): Boolean {

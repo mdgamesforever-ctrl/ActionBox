@@ -54,15 +54,78 @@ object NotificationClassifier {
         learningBoosts: Map<ClassifiedState, Int> = emptyMap()
     ): Map<ClassifiedState, Int> {
         val lowerText = text.lowercase()
+        // A message addressed to a public/group audience (a subreddit post, a Discord
+        // server channel) rather than to the recipient specifically — "what do you guys
+        // think" reads exactly like a personal REPLY-inviting question in isolation, but
+        // nobody individually owes a reply to a public post. See isPublicBroadcastContext's
+        // doc for exactly what's detected and why it's package/sender-based rather than a
+        // generic text heuristic.
+        val isPublicContext = isPublicBroadcastContext(sourceApp, sender)
+
         val baseScores = mapOf(
-            ClassifiedState.NOISE to scoreNoise(sourceApp, lowerText),
+            ClassifiedState.NOISE to scoreNoise(sourceApp, sender, lowerText, isPublicContext),
             ClassifiedState.FYI to score(lowerText, FYI_PATTERNS),
             ClassifiedState.DEADLINE to scoreDeadline(lowerText),
-            ClassifiedState.ACTION to scoreAction(lowerText),
+            ClassifiedState.ACTION to dampenInPublicContext(scoreAction(lowerText), isPublicContext),
             ClassifiedState.WAITING to score(lowerText, WAITING_PATTERNS),
-            ClassifiedState.REPLY to score(lowerText, REPLY_PATTERNS)
+            ClassifiedState.REPLY to dampenInPublicContext(score(lowerText, REPLY_PATTERNS), isPublicContext)
         )
-        return baseScores.mapValues { (state, score) -> score + (learningBoosts[state] ?: 0) }
+
+        // A bare day-name mention with no due/expiry language (see scoreDeadline) is weak
+        // enough that it should never be the SOLE basis for classifying a notification as a
+        // deadline — real-device testing turned up purely reflective/casual social posts that
+        // happen to mention day names ("Sunday in Amman hits different... pretending Monday
+        // doesn't exist") with every other category scoring exactly 0, which let this weak
+        // signal win by default even though it was never meant to be decisive on its own (see
+        // scoreDeadline's own comment). When nothing else has any signal either, this treats
+        // that the same as no signal at all — resultFromScores's topScore<=0 check then falls
+        // back to FYI, same as if the day name weren't mentioned.
+        val adjustedScores = if (isWeakStandaloneDeadlineOnly(lowerText, baseScores)) {
+            baseScores + (ClassifiedState.DEADLINE to 0)
+        } else {
+            baseScores
+        }
+
+        return adjustedScores.mapValues { (state, score) -> score + (learningBoosts[state] ?: 0) }
+    }
+
+    /**
+     * In a public context, an ACTION/REPLY-shaped phrase still isn't a request directed at the
+     * recipient personally — dented rather than zeroed, since a public post can still carry
+     * enough other signal (e.g. NOISE's own patterns) to win regardless, and a light dent
+     * keeps this a bias rather than a hard override (contrast [BOT_CONTENT_NOISE_WEIGHT],
+     * which IS meant to override regardless of phrasing for automated content).
+     */
+    private fun dampenInPublicContext(score: Int, isPublicContext: Boolean): Int =
+        if (isPublicContext) (score - PUBLIC_CONTEXT_PERSONAL_PENALTY).coerceAtLeast(0) else score
+
+    /**
+     * True when [sourceApp] is an inherently public/community platform (every notification is
+     * a broadcast to an audience, never a 1:1 message — Reddit chief among them), or when
+     * [sender] carries a channel-name marker ("#general", "#raid-timers") the way Discord/
+     * Slack-style apps format a server-channel message's title. Discord's own package isn't
+     * listed here since it carries both personal DMs and public channel messages through the
+     * same app — the "#" marker in the title is what actually distinguishes them, and DMs
+     * don't carry one.
+     */
+    private fun isPublicBroadcastContext(sourceApp: String, sender: String): Boolean =
+        sourceApp in PUBLIC_BROADCAST_PACKAGES || sender.contains("#")
+
+    /**
+     * True when the DEADLINE score came ONLY from [scoreDeadline]'s weak standalone-day-name
+     * path (no due/expiry word present) AND every other category scored exactly 0 — the
+     * specific combination that let a casual day-name mention win by default. A genuine due/
+     * expiry word makes this a real signal regardless of what else fired; and if any OTHER
+     * category also scored something, the normal scoring/tie-break already handles it (see
+     * scoreDeadline and Phase 2's original day-name fix).
+     */
+    private fun isWeakStandaloneDeadlineOnly(lowerText: String, baseScores: Map<ClassifiedState, Int>): Boolean {
+        val deadlineScore = baseScores[ClassifiedState.DEADLINE] ?: 0
+        if (deadlineScore <= 0) return false
+        val hasDueLanguage = DUE_PATTERNS.any { it.containsMatchIn(lowerText) } ||
+            BY_DEADLINE_PATTERN.containsMatchIn(lowerText)
+        if (hasDueLanguage) return false
+        return baseScores.filterKeys { it != ClassifiedState.DEADLINE }.values.all { it == 0 }
     }
 
     /**
@@ -139,25 +202,74 @@ object NotificationClassifier {
 
     // ---- Per-category scoring ----------------------------------------------------------
 
-    private fun scoreNoise(sourceApp: String, lowerText: String): Int {
+    private fun scoreNoise(sourceApp: String, sender: String, lowerText: String, isPublicContext: Boolean): Int {
         val packageScore = if (sourceApp in NOISE_PACKAGES) NOISE_PACKAGE_WEIGHT else 0
-        return packageScore + score(lowerText, NOISE_PATTERNS)
+        // Automated bot/broadcast content (a Discord raid-reminder bot, a giveaway-announcement
+        // bot) should read as NOISE regardless of its surface phrasing — a bot's giveaway rules
+        // text can look WAITING-ish, a raid-timer roster dump can look DEADLINE-ish, but neither
+        // is a message from a person. Weighted like NOISE_PACKAGE_WEIGHT (strong enough to win
+        // outright) rather than the lighter public-context dent below, since "obviously
+        // automated" is a much stronger signal than "merely public" — a human's public Reddit
+        // post still deserves its own category, an automated bot dump generally doesn't.
+        val botScore = if (isBotOrMassMentionContent(sender, lowerText)) BOT_CONTENT_NOISE_WEIGHT else 0
+        // A public post/broadcast that doesn't otherwise match a specific NOISE phrase is
+        // still more likely informational/promotional than a personal request — a light bias,
+        // not a hard override (see dampenInPublicContext's doc for the contrast with bots).
+        val publicContextScore = if (isPublicContext) PUBLIC_CONTEXT_NOISE_BOOST else 0
+        return packageScore + botScore + publicContextScore + score(lowerText, NOISE_PATTERNS)
     }
 
+    private fun isBotOrMassMentionContent(sender: String, lowerText: String): Boolean =
+        BOT_SENDER_PATTERN.containsMatchIn(sender) || MASS_MENTION_PATTERN.containsMatchIn(lowerText)
+
     private fun scoreDeadline(lowerText: String): Int {
-        val dueMatches = DUE_PATTERNS.count { it.containsMatchIn(lowerText) } +
-            (if (BY_DEADLINE_PATTERN.containsMatchIn(lowerText)) 1 else 0)
-        val dateMatches = DEADLINE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+        // "should arrive by tonight" / "expect it by 5pm" — a WAITING delivery-commitment
+        // phrase describing WHEN something will show up isn't a deadline the recipient must
+        // act by. Without this, "by <time>" ties DEADLINE against WAITING's own score and
+        // DEADLINE wins the tie (see TIE_BREAK_ORDER) — this only suppresses the generic "by
+        // <time>" trigger, not an explicit due/expiry word, so "should arrive by the
+        // deadline" still correctly scores DEADLINE via DUE_PATTERNS.
+        val deliveryCommitment = DEADLINE_SUPPRESSED_BY_DELIVERY_COMMITMENT.containsMatchIn(lowerText)
+        val byDeadlineHit = !deliveryCommitment && BY_DEADLINE_PATTERN.containsMatchIn(lowerText)
+        // Tracked separately from byDeadlineHit: an explicit due/expiry WORD ("due", "cutoff",
+        // "expires"...) is a much stronger, less generic signal than the bare "by <time>"
+        // trigger — see below for why that distinction matters for the combo-date broadening.
+        val explicitDueWordCount = DUE_PATTERNS.count { it.containsMatchIn(lowerText) }
+        val dueMatches = explicitDueWordCount + (if (byDeadlineHit) 1 else 0)
 
         if (dueMatches == 0) {
             // A bare day name/relative phrase with no due/expiry language is a weak signal
             // on its own — ordinary sentences mention days constantly without implying a
             // deadline ("are you free on Tuesday?", "meeting moved to Tuesday", "booking
-            // confirmed for Tuesday"). Score low enough that it can never tie with, let
-            // alone beat, a specific phrase match belonging to another category.
+            // confirmed for Tuesday"). Score low enough that it can never tie with, let alone
+            // beat, a specific phrase match belonging to another category — and see
+            // scoreCategories' isWeakStandaloneDeadlineOnly for why it also can't win purely
+            // by default when nothing else scores anything either. Deliberately the NARROW
+            // pattern set (day names + a few relative phrases), not DEADLINE_COMBO_DATE_PATTERNS'
+            // broader one below — "today"/"tomorrow"/time-of-day are far too common in ordinary
+            // non-deadline sentences to trust as a standalone trigger on their own.
+            val dateMatches = DEADLINE_STANDALONE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
             return dateMatches * STANDALONE_DATE_WEIGHT
         }
 
+        // The broader combo date-pattern set (calendar dates, "today"/"tomorrow"/"tonight", a
+        // bare time of day) only strengthens the score when a genuinely STRONG due/expiry
+        // word backs it up — e.g. "payment due Sep 12" or "cutoff is 5pm today" — NOT when
+        // dueMatches is nonzero purely from "by <time>" or the equally-generic "before"
+        // (STRONG_DUE_PATTERNS excludes it for exactly this reason). "by 9am"/"before 9am"
+        // already form part of the accepted ACTION/DEADLINE overlap (e.g. "complete the form
+        // by 9am" is a legitimate ACTION request), and crediting a bare time-of-day there in
+        // addition to what "by"/"before" already contribute tipped several such cases from
+        // ACTION to DEADLINE that previously resolved correctly — this keeps that widening
+        // from happening while still fixing the systematically-low confidence on genuine,
+        // strong-due-word-backed deadlines (see EXTRACT_DATE_PATTERN, which already
+        // recognized these for display; scoring previously didn't credit them at all).
+        val hasStrongDueWord = STRONG_DUE_PATTERNS.any { it.containsMatchIn(lowerText) }
+        val dateMatches = if (hasStrongDueWord) {
+            DEADLINE_COMBO_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+        } else {
+            DEADLINE_STANDALONE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+        }
         var total = dueMatches * DUE_WEIGHT + dateMatches * DATE_WEIGHT
         if (dateMatches > 0) total += COMBO_BONUS
         return total
@@ -207,7 +319,7 @@ object NotificationClassifier {
                 WAITING_PATTERNS.any { it.containsMatchIn(lower) } ||
                 DUE_PATTERNS.any { it.containsMatchIn(lower) } ||
                 BY_DEADLINE_PATTERN.containsMatchIn(lower) ||
-                DEADLINE_DATE_PATTERNS.any { it.containsMatchIn(lower) }
+                DEADLINE_COMBO_DATE_PATTERNS.any { it.containsMatchIn(lower) }
         } ?: clauses.firstOrNull()
 
         val base = candidate ?: (if (sender.isNotBlank()) "$sender: $text" else text)
@@ -229,6 +341,12 @@ object NotificationClassifier {
     private const val STRENGTH_CAP = 9f // was 8 pre-Phase 5; see computeConfidence's doc
     private const val MARGIN_WEIGHT = 0.6f
     private const val STRENGTH_WEIGHT = 0.4f
+    // Sized like NOISE_PACKAGE_WEIGHT: automated/bot broadcast content should win outright
+    // regardless of surface phrasing, the same way a known noise-app package does.
+    private const val BOT_CONTENT_NOISE_WEIGHT = 10
+    // A light bias, not a hard override — see dampenInPublicContext's doc.
+    private const val PUBLIC_CONTEXT_NOISE_BOOST = 2
+    private const val PUBLIC_CONTEXT_PERSONAL_PENALTY = 3
 
     private fun phrases(vararg raw: String): List<Regex> = raw.map { Regex("\\b${Regex.escape(it)}\\b") }
 
@@ -242,11 +360,38 @@ object NotificationClassifier {
         "com.snapchat.android"
     )
 
-    private val NOISE_PATTERNS = phrases(
+    // See isPublicBroadcastContext's doc: apps where every notification is a broadcast to an
+    // audience, never a 1:1 message. Reddit doesn't carry personal DMs through the same
+    // notification surface the way Discord/Slack do, so its package alone is a safe signal —
+    // Discord is intentionally NOT listed here (see that function's doc).
+    private val PUBLIC_BROADCAST_PACKAGES = setOf(
+        "com.reddit.frontpage"
+    )
+
+    // A sender/title containing "bot" (case-insensitive) — common Discord/Slack automated-
+    // account naming ("RaidBot", "GiveawayBot", "MEE6 Bot"). Doesn't catch every bot (some
+    // have no "bot" in the name at all), but it's the specific, low-false-positive signal a
+    // real person's display name essentially never collides with.
+    private val BOT_SENDER_PATTERN = Regex("bot", RegexOption.IGNORE_CASE)
+
+    // A mass ping ("@everyone", "@here") is addressed to an entire server/channel, never to
+    // the recipient individually — a strong automated/broadcast signal regardless of sender.
+    private val MASS_MENTION_PATTERN = Regex("@(?:everyone|here)\\b", RegexOption.IGNORE_CASE)
+
+    private val NOISE_PATTERNS: List<Regex> = phrases(
         "new video", "recommended for you", "sale", "promotion", "trending", "suggested post",
         "new follower", "daily reward",
         "liked your", "started following you", "posted a new", "limited time", "flash sale",
-        "new post from", "commented on your"
+        "new post from", "commented on your",
+        // Promotional/marketing phrasing whose imperative-sounding call-to-action ("check it
+        // out") was being read as a literal command rather than recognized as promotional
+        // framing (see the "check it out" suppression on ACTION_VERB_SUPPRESSED_BY).
+        "today only", "check it out", "new update available", "don't miss out", "act now",
+        "shop now"
+    ) + listOf(
+        // "50% off", "70% off" — percent-off framing, a classic promo pattern not otherwise
+        // caught by any literal phrase above.
+        Regex("\\d+%\\s*off")
     )
 
     private val FYI_PATTERNS = phrases(
@@ -254,11 +399,26 @@ object NotificationClassifier {
         "payment received", "transaction completed", "meeting moved", "meeting rescheduled",
         "flight landed", "package arrived", "backup completed",
         "payment successful", "your receipt", "verification code", "otp", "confirmation number",
-        "booking confirmed", "successfully completed"
+        "booking confirmed", "successfully completed",
+        // Real-device testing: "package delivered" (no "has been") and OS-style
+        // completion-status notifications weren't covered by any existing phrase.
+        "package delivered", "was delivered", "download complete", "download finished",
+        "installation complete", "update installed"
     )
 
     private val DUE_PATTERNS = phrases(
         "due", "expires", "expiring", "deadline", "before",
+        "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
+    )
+
+    // "before" (like "by") is too generic on its own to unlock DEADLINE_COMBO_DATE_PATTERNS'
+    // broader bonus — both show up constantly in the accepted ACTION/DEADLINE overlap cluster
+    // ("submit the form before Friday", "complete the form by 9am"/"...before 9am" once "b4"
+    // normalizes to "before"). Everything else in DUE_PATTERNS is an unambiguous due/expiry
+    // word that genuinely warrants trusting a broader date match alongside it — see
+    // scoreDeadline's dateMatches gate.
+    private val STRONG_DUE_PATTERNS = phrases(
+        "due", "expires", "expiring", "deadline",
         "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
     )
 
@@ -272,11 +432,40 @@ object NotificationClassifier {
         RegexOption.IGNORE_CASE
     )
 
-    // Day names and relative time phrases count as deadline signals on their own, per spec,
-    // even without an accompanying due/expiry word.
-    private val DEADLINE_DATE_PATTERNS = phrases(
+    // "should arrive by tonight" / "expect it by 5pm" — see scoreDeadline's doc for why a
+    // delivery-commitment phrase makes the following "by <time>" not a real deadline signal.
+    private val DEADLINE_SUPPRESSED_BY_DELIVERY_COMMITMENT = Regex(
+        "\\b(?:should (?:arrive|expect)|expect (?:it|the|your|this|that))\\b"
+    )
+
+    // Day names and relative time phrases count as deadline signals ON THEIR OWN, per spec,
+    // even without an accompanying due/expiry word — deliberately the NARROW set: "today"/
+    // "tomorrow"/a bare time-of-day are far too common in ordinary non-deadline sentences to
+    // trust without due/expiry language already establishing the context (see scoreDeadline).
+    private val DEADLINE_STANDALONE_DATE_PATTERNS = phrases(
         "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
         "end of month", "end of week", "next week"
+    )
+
+    // Broader set used only to STRENGTHEN a deadline that due/expiry language already
+    // established (see scoreDeadline) — adds calendar dates, "today"/"tomorrow"/"tonight",
+    // and a bare time of day, all of which EXTRACT_DATE_PATTERN already recognizes for
+    // display but scoring previously ignored, leaving even an unambiguous dated deadline
+    // ("payment due Sep 12", "cutoff is 5pm today") capped at a low, under-confident score.
+    private val DEADLINE_COMBO_DATE_PATTERNS: List<Regex> = DEADLINE_STANDALONE_DATE_PATTERNS + phrases(
+        "today", "tomorrow", "tonight",
+        "january", "february", "march", "april", "may", "june", "july", "august", "september",
+        "october", "november", "december"
+    ) + listOf(
+        Regex("\\b\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)\\b", RegexOption.IGNORE_CASE), // "5pm", "10:30 am"
+        Regex("\\b\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?\\b"), // "9/12", "9/12/2025"
+        // "due Sep 12", "expires Dec. 25" — abbreviated month name + day number; the full
+        // month names above don't match these, and only abbreviations that actually differ
+        // from the full spelling need listing (May's abbreviation is itself).
+        Regex(
+            "\\b(?:jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\\.?\\s+\\d{1,2}\\b",
+            RegexOption.IGNORE_CASE
+        )
     )
 
     private data class ActionVerb(val word: String, val bare: Regex, val directed: Regex)
@@ -295,24 +484,48 @@ object NotificationClassifier {
         )
     }
 
+    // A first-person future-commitment prefix ("I'll", "I will" — "gonna"/"going to" both
+    // normalize to "going to" via TextNormalizer) immediately before one of these verbs means
+    // the SENDER is committing to do it themselves — a WAITING follow-up, not a request aimed
+    // at the recipient — even though the bare verb also appears in ACTION_VERBS. Real
+    // notifications ("I'll call you back after the meeting", "gonna send the file soon") were
+    // scoring ACTION because the only competing WAITING signal (the generic "i will" catch-all
+    // below) merely TIES the verb's own ACTION score, and ACTION wins ties (see
+    // TIE_BREAK_ORDER) — an actual suppression is needed, not just an added competing score.
+    private fun futureCommitmentPattern(verb: String): String =
+        "\\b(?:i'll|i will|going to)\\s+${Regex.escape(verb)}\\b"
+
     // See the suppression check in scoreAction(): these verbs double as the head word of a
-    // more specific REPLY/WAITING phrase, so that phrase already "owns" the word.
+    // more specific REPLY/WAITING phrase, or of promotional call-to-action framing, so that
+    // phrase already "owns" the word.
     private val ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = mapOf(
-        "call" to Regex("\\bcall me\\b"),
-        "check" to Regex("\\bi'll check\\b"),
+        "call" to Regex("\\bcall me\\b|${futureCommitmentPattern("call")}"),
+        "check" to Regex(
+            futureCommitmentPattern("check") +
+                // "new update available - check it out" is promotional framing, not a literal
+                // command directed at the recipient — a genuine imperative reads "check X"
+                // (an object), not the idiomatic "check it out".
+                "|\\bcheck it out\\b"
+        ),
         // Only suppress when confirming something about the recipient themselves (receipt,
         // attendance, agreement — "confirm you received/got/are coming"), which is a REPLY-
         // style acknowledgment request. "Confirm the details/report/numbers" is confirming
         // a deliverable, a genuine ACTION request, and must NOT be suppressed — narrowed
         // after the broader "any 'can you confirm'" version incorrectly pulled those into
         // REPLY.
-        "confirm" to Regex("\\bcan you confirm you\\b"),
-        "bring" to Regex("\\bi(?:'ll| will) bring\\b")
+        "confirm" to Regex("\\bcan you confirm you\\b|${futureCommitmentPattern("confirm")}"),
+        "bring" to Regex("\\bi(?:'ll| will) bring\\b|${futureCommitmentPattern("bring")}"),
+        "send" to Regex(futureCommitmentPattern("send")),
+        // "Installation complete."/"Download complete." is a completion-STATUS noun phrase
+        // (an FYI announcement), not an imperative verb directed at the recipient — without
+        // this, it ties FYI's own "installation complete" phrase match and ACTION wins the
+        // tie (see TIE_BREAK_ORDER).
+        "complete" to Regex("\\b(?:download|installation|update|setup|backup|sync|upload)\\s+complete\\b")
     )
 
     private val REQUEST_MARKERS = phrases("can you", "could you", "would you", "need you to")
 
-    private val WAITING_PATTERNS = phrases(
+    private val WAITING_PATTERNS: List<Regex> = phrases(
         "i'll send", "i will", "i'll check", "i'll get back to you",
         // Generalized from the object-literal "expect it"/"i'll bring it", which only
         // matched when the object was literally "it" and missed "expect the file"/"i'll
@@ -322,15 +535,33 @@ object NotificationClassifier {
         "should expect", "i'll bring",
         "should arrive", "we're working on it", "i'm working on", "i am working on",
         "on it", "will do", "will send", "will get back", "will reply"
+    ) + listOf(
+        // "expect it in your inbox shortly" — a bare "expect" commitment without the "should"
+        // prefix above. Scoped to "expect + a determiner/pronoun" (it/the/your/this/that)
+        // rather than the bare word "expect", which appears in enough unrelated contexts
+        // ("what did you expect") to be too broad on its own.
+        Regex("\\bexpect\\s+(?:it|the|your|this|that)\\b"),
+        // "I'll call you back", "gonna send the file soon" (normalizes to "going to send...")
+        // — see futureCommitmentPattern's doc on ACTION_VERB_SUPPRESSED_BY for why a real
+        // WAITING match is needed here, not just suppressing the verb's ACTION score.
+        Regex(futureCommitmentPattern("call")),
+        Regex(futureCommitmentPattern("send")),
+        Regex(futureCommitmentPattern("check")),
+        Regex(futureCommitmentPattern("confirm"))
     )
 
     private val REPLY_PATTERNS = phrases(
         "let me know", "lmk", "tell me", "get back to me", "call me", "text me", "hmu",
         "hit me up", "what do you think", "can you confirm", "keep me posted", "are you free",
         "when are you free"
+    ) + listOf(
+        // "how was your day" — a casual check-in question with no ACTION_VERBS/REQUEST_MARKERS
+        // match, so it previously scored 0 everywhere and fell through to a weak, essentially
+        // arbitrary pick (real-device testing saw this land on ACTION at 12% confidence).
+        Regex("\\bhow (?:was|is) your\\b")
     )
 
-    // Broader than DEADLINE_DATE_PATTERNS — used only to populate extractedDate, not scoring.
+    // Broader than DEADLINE_STANDALONE_DATE_PATTERNS — used only to populate extractedDate, not scoring.
     private val EXTRACT_DATE_PATTERN = Regex(
         "\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight|" +
             "end of month|end of week|next week|" +

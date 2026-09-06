@@ -19,7 +19,7 @@ class CorrectionLearningSimulationTest {
     // A fake sender on a fake app whose messages the classifier reads as ACTION on their own
     // wording, but which the user has repeatedly told ActionBox are really just FYI notices.
     private val sourceApp = "com.fake.landlordportal"
-    private val sender = "Landlord Bot"
+    private val sender = "Landlord Portal"
     private val firstMessage = "Please confirm you received this month's rent receipt."
     private val secondMessage = "Please confirm you received this month's utility receipt."
 
@@ -40,7 +40,7 @@ class CorrectionLearningSimulationTest {
 
         // Simulate the user correcting 3 prior messages from this same sender to FYI via the
         // feed's picker. Each correction is one call to
-        // LearningPatternDao.recordCorrection(SENDER, "Landlord Bot", FYI) in production; the
+        // LearningPatternDao.recordCorrection(SENDER, "Landlord Portal", FYI) in production; the
         // tally it leaves behind is exactly this map.
         val senderCorrectionHistory = mapOf(ClassifiedState.FYI to 3)
 
