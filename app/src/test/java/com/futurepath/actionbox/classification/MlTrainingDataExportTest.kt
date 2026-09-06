@@ -15,9 +15,7 @@ import java.io.File
  */
 class MlTrainingDataExportTest {
 
-    @Test
-    fun exportNormalizedCorpus() {
-        val cases = SyntheticNotificationCorpus.buildCorpus()
+    private fun export(cases: List<SyntheticNotificationCorpus.Case>, path: String) {
         val sb = StringBuilder()
         sb.appendLine("templateIndex\tlabel\tsourceApp\tsender\tnormalizedText")
         for (case in cases) {
@@ -25,10 +23,26 @@ class MlTrainingDataExportTest {
             // Tabs/newlines can't appear in this corpus's generated text, so no escaping needed.
             sb.appendLine("${case.templateIndex}\t${case.expected}\t${case.sourceApp}\t${case.sender}\t$normalized")
         }
-        File("build/ml-training-data.tsv").apply {
+        File(path).apply {
             parentFile?.mkdirs()
             writeText(sb.toString())
         }
-        println("Exported ${cases.size} examples to build/ml-training-data.tsv")
+        println("Exported ${cases.size} examples to $path")
+    }
+
+    @Test
+    fun exportNormalizedCorpus() {
+        export(SyntheticNotificationCorpus.buildCorpus(), "build/ml-training-data.tsv")
+    }
+
+    /**
+     * Exports exactly Phase 2's original 1128-example corpus (see
+     * SyntheticNotificationCorpus.buildPhase2Corpus) so the on-device ML model can be evaluated
+     * against the identical benchmark that produced the reported 94.68% rule-engine accuracy —
+     * see tools/evaluate_ml_model_on_phase2_corpus.py.
+     */
+    @Test
+    fun exportPhase2BenchmarkCorpus() {
+        export(SyntheticNotificationCorpus.buildPhase2Corpus(), "build/phase2-benchmark-corpus.tsv")
     }
 }

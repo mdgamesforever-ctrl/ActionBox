@@ -34,7 +34,16 @@ object SyntheticNotificationCorpus {
         // Which Template this case was generated from — lets a held-out evaluation split by
         // *template* (unseen phrasing) rather than just by row (which would only ever hold out
         // a different name/day/amount substituted into an already-seen sentence pattern).
-        val templateIndex: Int
+        val templateIndex: Int,
+        // i from the generating template's `for (i in 0 until variants)` loop — lets
+        // buildPhase2Corpus() reconstruct exactly the first 12 variants per template, matching
+        // Phase 2's original corpus regardless of how many total variants exist now.
+        val variantIndex: Int,
+        // False only for the templates added in Phase 4 (see the class doc) — lets
+        // buildPhase2Corpus() reconstruct the exact original 94-template/1128-example corpus
+        // that produced Phase 2's reported 94.68% rule-engine accuracy, for a fair comparison
+        // against the on-device ML model on the same benchmark.
+        val isPhase2Original: Boolean
     )
 
     // ---- Substitution value pools ----------------------------------------------------
@@ -84,7 +93,8 @@ object SyntheticNotificationCorpus {
         val expected: ClassifiedState,
         val sourceApp: String,
         val senders: List<String>,
-        val variants: Int = 24
+        val variants: Int = 24,
+        val isPhase2Original: Boolean = true
     )
 
     // ---- Templates -----------------------------------------------------------------------
@@ -152,16 +162,16 @@ object SyntheticNotificationCorpus {
         // Added for Phase 4 ML training: same category, genuinely different phrasing/words
         // from the templates above, to give the model more than one lexical "shape" to learn
         // WAITING from (see tools/train_and_export_tflite_model.py's template-holdout report).
-        Template("I'll have {item} to you shortly.", ClassifiedState.WAITING, WHATSAPP, NAMES),
-        Template("Should have an update within the hour.", ClassifiedState.WAITING, GMAIL, listOf("Support", "Vendor")),
-        Template("Still looking into it, will follow up soon.", ClassifiedState.WAITING, GMAIL, listOf("Support", "IT Dept")),
-        Template("Give me a moment to check on that.", ClassifiedState.WAITING, WHATSAPP, NAMES),
-        Template("One moment while I sort this out.", ClassifiedState.WAITING, WHATSAPP, NAMES),
-        Template("Working through it, appreciate your patience.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
-        Template("almost done, hang tight", ClassifiedState.WAITING, WHATSAPP, NAMES),
-        Template("no updates yet but im on it", ClassifiedState.WAITING, WHATSAPP, NAMES),
-        Template("still working on it, sry for the wait", ClassifiedState.WAITING, WHATSAPP, NAMES),
-        Template("ill loop back once its done", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        Template("I'll have {item} to you shortly.", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
+        Template("Should have an update within the hour.", ClassifiedState.WAITING, GMAIL, listOf("Support", "Vendor"), isPhase2Original = false),
+        Template("Still looking into it, will follow up soon.", ClassifiedState.WAITING, GMAIL, listOf("Support", "IT Dept"), isPhase2Original = false),
+        Template("Give me a moment to check on that.", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
+        Template("One moment while I sort this out.", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
+        Template("Working through it, appreciate your patience.", ClassifiedState.WAITING, GMAIL, listOf("Support"), isPhase2Original = false),
+        Template("almost done, hang tight", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
+        Template("no updates yet but im on it", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
+        Template("still working on it, sry for the wait", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
+        Template("ill loop back once its done", ClassifiedState.WAITING, WHATSAPP, NAMES, isPhase2Original = false),
 
         // ============================== DEADLINE ==============================
         Template("Your payment of {amount} is due on {day}.", ClassifiedState.DEADLINE, BANK, listOf("Bank Alert")),
@@ -197,16 +207,16 @@ object SyntheticNotificationCorpus {
         Template("ur package arrived just now", ClassifiedState.FYI, AMAZON, listOf("Courier")),
         // Added for Phase 4 ML training: genuinely different phrasing/words from the
         // templates above (see the WAITING block's comment for why).
-        Template("Delivery scheduled for {day}.", ClassifiedState.FYI, AMAZON, listOf("Amazon", "Courier")),
-        Template("Refund of {amount} has been processed.", ClassifiedState.FYI, BANK, listOf("Bank Alert")),
-        Template("Your appointment is confirmed for {day}.", ClassifiedState.FYI, GMAIL, listOf("Salon", "Clinic")),
-        Template("Your statement is now available to view.", ClassifiedState.FYI, BANK, listOf("Bank Alert")),
-        Template("Your password was changed successfully.", ClassifiedState.FYI, GMAIL, listOf("IT Dept", "Service")),
-        Template("Your ride has arrived.", ClassifiedState.FYI, DOORDASH, listOf("Rideshare")),
-        Template("Ticket confirmed for {day}.", ClassifiedState.FYI, GMAIL, listOf("Events Team", "Airline")),
-        Template("reminder: nothing to do here, all set", ClassifiedState.FYI, GMAIL, listOf("Support")),
-        Template("fyi ur ride is here", ClassifiedState.FYI, DOORDASH, listOf("Rideshare")),
-        Template("refund of {amount} done", ClassifiedState.FYI, BANK, listOf("Bank Alert")),
+        Template("Delivery scheduled for {day}.", ClassifiedState.FYI, AMAZON, listOf("Amazon", "Courier"), isPhase2Original = false),
+        Template("Refund of {amount} has been processed.", ClassifiedState.FYI, BANK, listOf("Bank Alert"), isPhase2Original = false),
+        Template("Your appointment is confirmed for {day}.", ClassifiedState.FYI, GMAIL, listOf("Salon", "Clinic"), isPhase2Original = false),
+        Template("Your statement is now available to view.", ClassifiedState.FYI, BANK, listOf("Bank Alert"), isPhase2Original = false),
+        Template("Your password was changed successfully.", ClassifiedState.FYI, GMAIL, listOf("IT Dept", "Service"), isPhase2Original = false),
+        Template("Your ride has arrived.", ClassifiedState.FYI, DOORDASH, listOf("Rideshare"), isPhase2Original = false),
+        Template("Ticket confirmed for {day}.", ClassifiedState.FYI, GMAIL, listOf("Events Team", "Airline"), isPhase2Original = false),
+        Template("reminder: nothing to do here, all set", ClassifiedState.FYI, GMAIL, listOf("Support"), isPhase2Original = false),
+        Template("fyi ur ride is here", ClassifiedState.FYI, DOORDASH, listOf("Rideshare"), isPhase2Original = false),
+        Template("refund of {amount} done", ClassifiedState.FYI, BANK, listOf("Bank Alert"), isPhase2Original = false),
 
         // ================================ NOISE ================================
         Template("{name} liked your photo", ClassifiedState.NOISE, INSTAGRAM, listOf("Instagram")),
@@ -223,14 +233,14 @@ object SyntheticNotificationCorpus {
         Template("New post from {name} is trending near you", ClassifiedState.NOISE, TWITTER, listOf("Twitter")),
         // Added for Phase 4 ML training: genuinely different phrasing/words from the
         // templates above (see the WAITING block's comment for why).
-        Template("Don't miss out on today's deals!", ClassifiedState.NOISE, TIKTOK, listOf("TikTok", "Shop")),
-        Template("{name} shared a story", ClassifiedState.NOISE, INSTAGRAM, listOf("Instagram")),
-        Template("Your weekly digest is ready", ClassifiedState.NOISE, FACEBOOK, listOf("Facebook")),
-        Template("Top posts picked for you this week", ClassifiedState.NOISE, PINTEREST, listOf("Pinterest")),
-        Template("You might like this creator", ClassifiedState.NOISE, YOUTUBE, listOf("YouTube")),
-        Template("New merch just dropped!", ClassifiedState.NOISE, TIKTOK, listOf("Shop")),
-        Template("{name} tagged you in a post", ClassifiedState.NOISE, FACEBOOK, listOf("Facebook", "Instagram")),
-        Template("unlock a mystery reward today", ClassifiedState.NOISE, GAME, listOf("GameApp"))
+        Template("Don't miss out on today's deals!", ClassifiedState.NOISE, TIKTOK, listOf("TikTok", "Shop"), isPhase2Original = false),
+        Template("{name} shared a story", ClassifiedState.NOISE, INSTAGRAM, listOf("Instagram"), isPhase2Original = false),
+        Template("Your weekly digest is ready", ClassifiedState.NOISE, FACEBOOK, listOf("Facebook"), isPhase2Original = false),
+        Template("Top posts picked for you this week", ClassifiedState.NOISE, PINTEREST, listOf("Pinterest"), isPhase2Original = false),
+        Template("You might like this creator", ClassifiedState.NOISE, YOUTUBE, listOf("YouTube"), isPhase2Original = false),
+        Template("New merch just dropped!", ClassifiedState.NOISE, TIKTOK, listOf("Shop"), isPhase2Original = false),
+        Template("{name} tagged you in a post", ClassifiedState.NOISE, FACEBOOK, listOf("Facebook", "Instagram"), isPhase2Original = false),
+        Template("unlock a mystery reward today", ClassifiedState.NOISE, GAME, listOf("GameApp"), isPhase2Original = false)
     )
 
     fun buildCorpus(): List<Case> {
@@ -242,10 +252,22 @@ object SyntheticNotificationCorpus {
                     sender = template.senders[i % template.senders.size],
                     text = fill(template.text, i),
                     expected = template.expected,
-                    templateIndex = templateIndex
+                    templateIndex = templateIndex,
+                    variantIndex = i,
+                    isPhase2Original = template.isPhase2Original
                 )
             }
         }
         return cases
     }
+
+    /**
+     * Reconstructs exactly Phase 2's original corpus (94 templates * 12 variants = 1128
+     * examples, the one that produced the reported 94.68% rule-engine accuracy) out of the
+     * larger Phase 4 corpus, by keeping only the original templates and only their first 12
+     * variants. [fill]'s substitution formulas are deterministic and unchanged since Phase 2,
+     * so this is byte-for-byte the same corpus, not an approximation of it.
+     */
+    fun buildPhase2Corpus(): List<Case> =
+        buildCorpus().filter { it.isPhase2Original && it.variantIndex < 12 }
 }
