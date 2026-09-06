@@ -26,6 +26,9 @@ interface NotificationDao {
     @Query("SELECT * FROM captured_notifications ORDER BY timestamp DESC")
     suspend fun getAll(): List<NotificationEntity>
 
+    @Query("SELECT * FROM captured_notifications WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): NotificationEntity?
+
     @Query("SELECT COUNT(*) FROM captured_notifications")
     fun observeCount(): Flow<Int>
 

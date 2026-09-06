@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 class NotificationRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).notificationDao()
+    private val learningDao = AppDatabase.getInstance(context).learningPatternDao()
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
@@ -42,7 +43,8 @@ class NotificationRepository(context: Context) {
         )
 
         if (result.insertedRowId != -1L) {
-            val classification = NotificationClassifier.classify(sourceApp, sender, normalizedText)
+            val boosts = learningBoostsFor(sourceApp, sender, normalizedText)
+            val classification = NotificationClassifier.classify(sourceApp, sender, normalizedText, boosts)
             dao.updateClassification(
                 id = result.insertedRowId,
                 state = classification.state,
@@ -53,9 +55,41 @@ class NotificationRepository(context: Context) {
         }
     }
 
-    /** User-supplied correction from the feed's category picker. See [NotificationDao.updateCorrectedState]. */
+    /**
+     * Local learning layer: looks up whether this sender, app, or exact message text has a
+     * strong, consistent correction history (see [LearningPatternDao.strongCategoryFor]) and,
+     * if so, adds points for that category before the classifier picks a winner. All three
+     * sources stack additively — e.g. a sender AND a repeated phrase both pointing to the
+     * same category reinforce each other rather than one overriding the other. Purely local:
+     * everything this reads comes from this device's own Room database, no account or network
+     * involved.
+     */
+    private suspend fun learningBoostsFor(sourceApp: String, sender: String, normalizedText: String): Map<ClassifiedState, Int> {
+        val boosts = mutableMapOf<ClassifiedState, Int>()
+        learningDao.strongCategoryFor(LearningPatternType.SENDER, sender)?.let {
+            boosts[it] = (boosts[it] ?: 0) + SENDER_BOOST
+        }
+        learningDao.strongCategoryFor(LearningPatternType.APP, sourceApp)?.let {
+            boosts[it] = (boosts[it] ?: 0) + APP_BOOST
+        }
+        learningDao.strongCategoryFor(LearningPatternType.PHRASE, normalizedText)?.let {
+            boosts[it] = (boosts[it] ?: 0) + PHRASE_BOOST
+        }
+        return boosts
+    }
+
+    /**
+     * User-supplied correction from the feed's category picker. Persists the override (see
+     * [NotificationDao.updateCorrectedState]) and feeds it into the local learning layer so
+     * future notifications from the same sender/app, or repeats of the same message, benefit
+     * from it (see [learningBoostsFor]).
+     */
     suspend fun correctClassification(id: Long, newState: ClassifiedState) {
         dao.updateCorrectedState(id, newState)
+        val notification = dao.getById(id) ?: return
+        learningDao.recordCorrection(LearningPatternType.SENDER, notification.sender, newState)
+        learningDao.recordCorrection(LearningPatternType.APP, notification.sourceApp, newState)
+        learningDao.recordCorrection(LearningPatternType.PHRASE, notification.normalizedText, newState)
     }
 
     companion object {
@@ -64,6 +98,15 @@ class NotificationRepository(context: Context) {
         // has no MessagingStyle data (observed gap in testing: ~2.5s). Short enough that an
         // identical message sent again minutes/hours later is unaffected.
         private const val CROSS_SOURCE_WINDOW_MS = 10_000L
+
+        // Learning-boost weights, sized against the classifier's own scoring scale (most
+        // pattern matches score 2, a combo bonus scores 3, NOISE's app-package match scores
+        // 10 — see NotificationClassifier's weight constants). A repeated exact phrase is the
+        // strongest signal (the same templated notification recurring verbatim), sender is
+        // more reliable than app alone (an app can carry many different kinds of message).
+        private const val SENDER_BOOST = 4
+        private const val APP_BOOST = 3
+        private const val PHRASE_BOOST = 5
 
         @Volatile
         private var instance: NotificationRepository? = null

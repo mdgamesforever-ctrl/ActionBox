@@ -18,10 +18,23 @@ data class ClassificationResult(
  */
 object NotificationClassifier {
 
-    fun classify(sourceApp: String, sender: String, text: String): ClassificationResult {
+    /**
+     * @param learningBoosts Extra points added to each category's score before the winner is
+     * picked, from [com.futurepath.actionbox.data.LearningPatternDao.strongCategoryFor] — the
+     * local, on-device learning layer that biases classification toward a category this
+     * sender/app/phrase has been consistently corrected to before. Empty by default so this
+     * stays a pure function of its text inputs wherever no learning history applies (all
+     * existing callers/tests included).
+     */
+    fun classify(
+        sourceApp: String,
+        sender: String,
+        text: String,
+        learningBoosts: Map<ClassifiedState, Int> = emptyMap()
+    ): ClassificationResult {
         val lowerText = text.lowercase()
 
-        val scores = mapOf(
+        val baseScores = mapOf(
             ClassifiedState.NOISE to scoreNoise(sourceApp, lowerText),
             ClassifiedState.FYI to score(lowerText, FYI_PATTERNS),
             ClassifiedState.DEADLINE to scoreDeadline(lowerText),
@@ -29,6 +42,7 @@ object NotificationClassifier {
             ClassifiedState.WAITING to score(lowerText, WAITING_PATTERNS),
             ClassifiedState.REPLY to score(lowerText, REPLY_PATTERNS)
         )
+        val scores = baseScores.mapValues { (state, score) -> score + (learningBoosts[state] ?: 0) }
 
         val topScore = scores.values.max()
         // Among categories tied for the top score, prefer the more actionable/urgent one —
