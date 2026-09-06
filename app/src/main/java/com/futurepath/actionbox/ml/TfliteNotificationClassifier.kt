@@ -17,16 +17,21 @@ import java.nio.channels.FileChannel
  * the rule-based [com.futurepath.actionbox.classification.NotificationClassifier] — no network
  * call is made or possible; everything runs from a model file bundled in the APK's assets.
  *
- * The model currently shipped ([MODEL_ASSET_PATH]) is a **placeholder**: its FULLY_CONNECTED
- * weights are untrained deterministic noise (see tools/build_stub_tflite_model.py), not a
- * learned classifier. It exists so the runtime integration — dependency, asset packaging,
- * tensor plumbing, error handling — compiles and runs end to end before a real trained model
- * is ready. Its predictions are not meaningful yet and are not surfaced in the UI; see
+ * The model currently shipped ([MODEL_ASSET_PATH]) is a multinomial logistic regression
+ * (softmax regression) trained on the Phase 2 synthetic notification corpus (2928 examples
+ * across 122 sentence templates — see tools/train_and_export_tflite_model.py and
+ * SyntheticNotificationCorpus.kt), evaluated at 82.83% accuracy on a held-out set of entirely
+ * unseen phrasing (i.e. whole templates never seen during training, not just unseen
+ * name/day/amount substitutions — see that script's held-out reporting for the harder,
+ * row-level-leakage-free methodology and per-category breakdown). No real corrected examples
+ * from actual usage were available to train on: this was built in a sandbox with no connected
+ * device or user data, so retraining on real corrections once they exist is expected future
+ * work. Its output is not surfaced in the UI yet; see
  * [com.futurepath.actionbox.data.NotificationRepository] for how its output is currently
- * recorded (into `mlClassifiedState`/`mlConfidence`) purely for later comparison against the
+ * recorded (into `mlClassifiedState`/`mlConfidence`) purely for comparison against the
  * rule-based classifier and user corrections, the same way `correctedState` already is.
  *
- * Input/output contract a real trained model must keep (or this class and
+ * Input/output contract a replacement model must keep (or this class and
  * [HashedTextVectorizer] must be updated to match):
  *  - Input: float32 tensor, shape `[1, HashedTextVectorizer.VECTOR_SIZE]` — the hashed
  *    bag-of-words vector for the notification's normalized text.
@@ -85,7 +90,7 @@ class TfliteNotificationClassifier(context: Context) {
 
     companion object {
         private const val TAG = "TfliteClassifier"
-        private const val MODEL_ASSET_PATH = "models/notification_classifier_stub.tflite"
+        private const val MODEL_ASSET_PATH = "models/notification_classifier.tflite"
 
         // ClassifiedState.values() is already ACTION, REPLY, WAITING, DEADLINE, FYI, NOISE —
         // reusing it directly (rather than a hand-written list) keeps this in sync with the

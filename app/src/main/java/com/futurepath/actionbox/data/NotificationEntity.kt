@@ -49,10 +49,10 @@ data class NotificationEntity(
     // compared later (e.g. to measure real-world accuracy or retrain heuristics).
     val correctedState: ClassifiedState? = null,
     // Set by TfliteNotificationClassifier alongside classifiedState, when the on-device ML
-    // model loaded successfully. Currently a placeholder/untrained model (see that class's
-    // doc) — recorded purely for future comparison against classifiedState/correctedState,
-    // not shown in the UI or used for any decision yet. Null if ML classification is
-    // unavailable or failed for this notification.
+    // model loaded successfully (see that class's doc for the model and its held-out
+    // accuracy) — recorded purely for comparison against classifiedState/correctedState, not
+    // shown in the UI or used for any decision yet. Null if ML classification is unavailable
+    // or failed for this notification.
     val mlClassifiedState: ClassifiedState? = null,
     val mlConfidence: Int? = null
 )
