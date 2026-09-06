@@ -82,13 +82,30 @@ object NotificationClassifier {
 
         val deliveryTemplateBonus = if (isDeliveryStatusTemplate(sender, lowerText)) DELIVERY_TEMPLATE_WEIGHT else 0
 
-        val baseScores = mapOf(
+        // Pure word-based scores, with NO package-identity bonus folded in yet — used only to
+        // decide whether isWeakStandaloneDeadlineOnly should fire (see below). The calendar
+        // bonus nudges FYI and DEADLINE by the same fixed amount regardless of whether either
+        // side has any real word-based support, which — found via large-scale validation —
+        // defeats that safeguard's "every OTHER category scored exactly 0" check: a calendar
+        // notification with a bare day name and nothing else ("Calendar updated: new event
+        // added for Friday.") got FYI=0+bonus and DEADLINE=1(standalone)+bonus, so FYI was no
+        // longer 0 and the safeguard didn't fire, letting the bare day name win DEADLINE
+        // outright again — exactly the false positive the safeguard exists to prevent, just
+        // reintroduced through the bonus instead of a word match. Checking against the
+        // pre-bonus scores keeps the safeguard's original semantics intact regardless of which
+        // package-identity priors also apply to the same message.
+        val wordBasedScores = mapOf(
             ClassifiedState.NOISE to scoreNoise(sourceApp, sender, lowerText, isPublicContext),
-            ClassifiedState.FYI to score(lowerText, FYI_PATTERNS) + calendarBonus + bankingFyiBonus + deliveryTemplateBonus,
-            ClassifiedState.DEADLINE to scoreDeadline(lowerText) + calendarBonus + bankingDeadlineBonus,
+            ClassifiedState.FYI to score(lowerText, FYI_PATTERNS),
+            ClassifiedState.DEADLINE to scoreDeadline(lowerText),
             ClassifiedState.ACTION to dampenInPublicContext(scoreAction(lowerText), isPublicContext),
             ClassifiedState.WAITING to score(lowerText, WAITING_PATTERNS),
             ClassifiedState.REPLY to dampenInPublicContext(score(lowerText, REPLY_PATTERNS), isPublicContext)
+        )
+
+        val baseScores = wordBasedScores + mapOf(
+            ClassifiedState.FYI to wordBasedScores.getValue(ClassifiedState.FYI) + calendarBonus + bankingFyiBonus + deliveryTemplateBonus,
+            ClassifiedState.DEADLINE to wordBasedScores.getValue(ClassifiedState.DEADLINE) + calendarBonus + bankingDeadlineBonus
         )
 
         // A bare day-name mention with no due/expiry language (see scoreDeadline) is weak
@@ -99,8 +116,10 @@ object NotificationClassifier {
         // signal win by default even though it was never meant to be decisive on its own (see
         // scoreDeadline's own comment). When nothing else has any signal either, this treats
         // that the same as no signal at all — resultFromScores's topScore<=0 check then falls
-        // back to FYI, same as if the day name weren't mentioned.
-        val adjustedScores = if (isWeakStandaloneDeadlineOnly(lowerText, baseScores)) {
+        // back to FYI, same as if the day name weren't mentioned. Zeroes DEADLINE entirely
+        // (bonus included, not just the word-based part) once triggered, since the bonus was
+        // never meant to independently establish a deadline on its own either.
+        val adjustedScores = if (isWeakStandaloneDeadlineOnly(lowerText, wordBasedScores)) {
             baseScores + (ClassifiedState.DEADLINE to 0)
         } else {
             baseScores
