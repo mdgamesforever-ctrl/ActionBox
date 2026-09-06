@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.futurepath.actionbox.classification.ClassifiedState
+import com.futurepath.actionbox.classification.CorrectionLearning
 
 @Dao
 interface LearningPatternDao {
@@ -35,22 +36,14 @@ interface LearningPatternDao {
     }
 
     /**
-     * The dominant category for [key], if its history is both strong (at least
-     * [STRONG_THRESHOLD] corrections) and consistent (no other category for the same key
-     * comes close) — otherwise null. A key corrected to two different categories about
-     * equally often isn't a reliable signal and shouldn't bias anything.
+     * The dominant category for [key], if its correction history is strong and consistent
+     * enough to trust — see [CorrectionLearning.strongCategory], which makes that call from
+     * plain counts so it can be unit-tested without Room.
      */
     @Transaction
     suspend fun strongCategoryFor(type: LearningPatternType, key: String): ClassifiedState? {
         if (key.isBlank()) return null
-        val patterns = getPatterns(type, key)
-        val top = patterns.maxByOrNull { it.correctionCount } ?: return null
-        val runnerUp = patterns.filter { it.category != top.category }.maxOfOrNull { it.correctionCount } ?: 0
-        return if (top.correctionCount >= STRONG_THRESHOLD && top.correctionCount > runnerUp) top.category else null
-    }
-
-    companion object {
-        /** Minimum consistent corrections before a pattern is trusted to bias classification. */
-        const val STRONG_THRESHOLD = 3
+        val counts = getPatterns(type, key).associate { it.category to it.correctionCount }
+        return CorrectionLearning.strongCategory(counts)
     }
 }

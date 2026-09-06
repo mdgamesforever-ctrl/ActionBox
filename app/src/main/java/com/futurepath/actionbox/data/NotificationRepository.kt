@@ -2,6 +2,7 @@ package com.futurepath.actionbox.data
 
 import android.content.Context
 import com.futurepath.actionbox.classification.ClassifiedState
+import com.futurepath.actionbox.classification.CorrectionLearning
 import com.futurepath.actionbox.classification.NotificationClassifier
 import com.futurepath.actionbox.classification.TextNormalizer
 import kotlinx.coroutines.flow.Flow
@@ -67,13 +68,13 @@ class NotificationRepository(context: Context) {
     private suspend fun learningBoostsFor(sourceApp: String, sender: String, normalizedText: String): Map<ClassifiedState, Int> {
         val boosts = mutableMapOf<ClassifiedState, Int>()
         learningDao.strongCategoryFor(LearningPatternType.SENDER, sender)?.let {
-            boosts[it] = (boosts[it] ?: 0) + SENDER_BOOST
+            boosts[it] = (boosts[it] ?: 0) + CorrectionLearning.SENDER_BOOST
         }
         learningDao.strongCategoryFor(LearningPatternType.APP, sourceApp)?.let {
-            boosts[it] = (boosts[it] ?: 0) + APP_BOOST
+            boosts[it] = (boosts[it] ?: 0) + CorrectionLearning.APP_BOOST
         }
         learningDao.strongCategoryFor(LearningPatternType.PHRASE, normalizedText)?.let {
-            boosts[it] = (boosts[it] ?: 0) + PHRASE_BOOST
+            boosts[it] = (boosts[it] ?: 0) + CorrectionLearning.PHRASE_BOOST
         }
         return boosts
     }
@@ -98,15 +99,6 @@ class NotificationRepository(context: Context) {
         // has no MessagingStyle data (observed gap in testing: ~2.5s). Short enough that an
         // identical message sent again minutes/hours later is unaffected.
         private const val CROSS_SOURCE_WINDOW_MS = 10_000L
-
-        // Learning-boost weights, sized against the classifier's own scoring scale (most
-        // pattern matches score 2, a combo bonus scores 3, NOISE's app-package match scores
-        // 10 — see NotificationClassifier's weight constants). A repeated exact phrase is the
-        // strongest signal (the same templated notification recurring verbatim), sender is
-        // more reliable than app alone (an app can carry many different kinds of message).
-        private const val SENDER_BOOST = 4
-        private const val APP_BOOST = 3
-        private const val PHRASE_BOOST = 5
 
         @Volatile
         private var instance: NotificationRepository? = null
