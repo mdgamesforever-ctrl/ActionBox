@@ -201,6 +201,74 @@ object DiverseNotificationCorpus {
         t("🛠️ patching it up now", ClassifiedState.WAITING, GMAIL, listOf("IT Dept")),
         t("⏳ almost there, hang tight", ClassifiedState.WAITING, WHATSAPP, NAMES),
 
+        // WAITING, cont'd: real-device testing found WAITING to be the weakest-performing
+        // category (~70% on real-device phrasing) and no public dataset labels this concept
+        // directly (a future commitment/promise implying something is pending is distinct
+        // from a simple ACTION statement — see the research this batch is based on). These
+        // are hand-written, structurally distinct additions across four subtypes rather than
+        // more substitution variants of the above: formal commitments, casual/slang
+        // commitments, commitments reported in the third person, and — specifically targeting
+        // the real-device verb-overlap confusion — commitments built on a verb (call/send/
+        // check/confirm) that ALSO appears in ACTION_VERBS, where the future-commitment
+        // structure (not the verb) is what should decide the category.
+
+        // -- formal commitments --
+        t("I will have this ready by end of day.", ClassifiedState.WAITING, GMAIL, listOf("Manager")),
+        t("We will have an update for you within the hour.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("Please allow 24 to 48 hours while we look into this.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("I will follow up with legal and confirm shortly.", ClassifiedState.WAITING, GMAIL, listOf("Manager")),
+        t("We are currently reviewing your request and will respond soon.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("I will personally ensure this reaches you as soon as possible.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("Rest assured, we're working on this and you'll hear from us soon.", ClassifiedState.WAITING, GMAIL, listOf("Manager")),
+        t("I will finalize the report and get it over to you once it's ready.", ClassifiedState.WAITING, GMAIL, listOf("Manager")),
+        t("Our team will reach back out to you shortly with next steps.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("I will confirm the details once I hear from the vendor.", ClassifiedState.WAITING, GMAIL, listOf("Vendor")),
+
+        // -- casual/slang commitments --
+        t("bout to send it", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("otw with the docs", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("im finna hit u back in a min", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("fixing to head out with the package rn", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("lemme wrap this up real quick n ill send it ovr", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("just abt done, sending in a sec", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("gimme a minute, almost thru with it", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("bout to hop off n ill call u right after", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("brb sending rn, hold up", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("im finishing up rq, one sec", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("hol up im bout to confirm w the team", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("ok im otw, gimme like 10", ClassifiedState.WAITING, WHATSAPP, NAMES),
+
+        // -- third-person commitments (reported secondhand, not "I will...") --
+        t("The team is working on it and will circle back soon.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("They said they will call back after lunch.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("Support says they're looking into the issue.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("He mentioned he will have the report ready soon.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("She's finishing up the slides and will send them shortly.", ClassifiedState.WAITING, GMAIL, listOf("Coworker")),
+        t("IT said they're on it, should be fixed soon.", ClassifiedState.WAITING, GMAIL, listOf("IT Dept")),
+        t("The vendor confirmed they will send it out this week.", ClassifiedState.WAITING, GMAIL, listOf("Vendor")),
+        t("My manager said she will get back to us by end of day.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("The plumber said he's on his way.", ClassifiedState.WAITING, WHATSAPP, listOf("Roommate")),
+        t("They mentioned it's in progress and should be done soon.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("Landlord says he will check the leak tomorrow.", ClassifiedState.WAITING, WHATSAPP, listOf("Roommate")),
+        t("The doctor's office said they will call with results soon.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+
+        // -- verb-overlap commitments: call/send/check/confirm also live in ACTION_VERBS, so
+        // these specifically exercise the future-commitment structure overriding the verb --
+        t("I'll call you back after the meeting.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("gonna send it over in a bit", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("I'll check and confirm shortly.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("I'll confirm once I hear back from them.", ClassifiedState.WAITING, GMAIL, listOf("Manager")),
+        t("gonna call you back in five.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("I'll send this over as soon as it's ready.", ClassifiedState.WAITING, GMAIL, listOf("Vendor")),
+        t("going to check on this and let you know.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("I'll call back once I'm free.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("gonna check in with the team and get back to u.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("I'll send it your way once it's done.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("bout to call em back real quick.", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("gonna confirm with the office and let u know.", ClassifiedState.WAITING, GMAIL, listOf("Support")),
+        t("📞 I'll call you back shortly", ClassifiedState.WAITING, WHATSAPP, NAMES),
+        t("📤 gonna send it over soon", ClassifiedState.WAITING, WHATSAPP, NAMES),
+
         // ============================== DEADLINE ==============================
         t("Card expires end of month.", ClassifiedState.DEADLINE, BANK, listOf("Bank Alert")),
         t("Offer ends tmrw!!", ClassifiedState.DEADLINE, GMAIL, listOf("Vendor")),

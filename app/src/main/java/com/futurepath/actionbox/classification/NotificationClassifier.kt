@@ -624,9 +624,9 @@ object NotificationClassifier {
     // counts as a deadline signal when it actually precedes a day/date/time.
     private val BY_DEADLINE_PATTERN = Regex(
         "\\bby\\s+(?:the\\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|" +
-            "today|tomorrow|tonight|end of month|end of week|next week|" +
+            "today|tomorrow|tonight|midnight|noon|end of (?:the )?month|end of (?:the )?week|next week|" +
             "january|february|march|april|may|june|july|august|september|october|november|december|" +
-            "\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}/\\d{1,2})",
+            "\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}/\\d{1,2}|\\d{1,2}(?:st|nd|rd|th))",
         RegexOption.IGNORE_CASE
     )
 
@@ -640,9 +640,13 @@ object NotificationClassifier {
     // even without an accompanying due/expiry word — deliberately the NARROW set: "today"/
     // "tomorrow"/a bare time-of-day are far too common in ordinary non-deadline sentences to
     // trust without due/expiry language already establishing the context (see scoreDeadline).
-    private val DEADLINE_STANDALONE_DATE_PATTERNS = phrases(
-        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
-        "end of month", "end of week", "next week"
+    private val DEADLINE_STANDALONE_DATE_PATTERNS: List<Regex> = phrases(
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "next week"
+    ) + listOf(
+        // "end of month" and "end of the month" are both common phrasings of the same thing —
+        // the literal-phrase match above would only catch the former.
+        Regex("\\bend of (?:the )?month\\b"),
+        Regex("\\bend of (?:the )?week\\b")
     )
 
     // Broader set used only to STRENGTHEN a deadline that due/expiry language already
@@ -651,12 +655,13 @@ object NotificationClassifier {
     // display but scoring previously ignored, leaving even an unambiguous dated deadline
     // ("payment due Sep 12", "cutoff is 5pm today") capped at a low, under-confident score.
     private val DEADLINE_COMBO_DATE_PATTERNS: List<Regex> = DEADLINE_STANDALONE_DATE_PATTERNS + phrases(
-        "today", "tomorrow", "tonight",
+        "today", "tomorrow", "tonight", "midnight", "noon",
         "january", "february", "march", "april", "may", "june", "july", "august", "september",
         "october", "november", "december"
     ) + listOf(
         Regex("\\b\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)\\b", RegexOption.IGNORE_CASE), // "5pm", "10:30 am"
         Regex("\\b\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?\\b"), // "9/12", "9/12/2025"
+        Regex("\\b\\d{1,2}(?:st|nd|rd|th)\\b", RegexOption.IGNORE_CASE), // "the 1st", "the 30th"
         // "due Sep 12", "expires Dec. 25" — abbreviated month name + day number; the full
         // month names above don't match these, and only abbreviations that actually differ
         // from the full spelling need listing (May's abbreviation is itself).
@@ -682,28 +687,44 @@ object NotificationClassifier {
         )
     }
 
-    // A first-person future-commitment prefix ("I'll", "I will" — "gonna"/"going to" both
-    // normalize to "going to" via TextNormalizer) immediately before one of these verbs means
-    // the SENDER is committing to do it themselves — a WAITING follow-up, not a request aimed
-    // at the recipient — even though the bare verb also appears in ACTION_VERBS. Real
-    // notifications ("I'll call you back after the meeting", "gonna send the file soon") were
-    // scoring ACTION because the only competing WAITING signal (the generic "i will" catch-all
-    // below) merely TIES the verb's own ACTION score, and ACTION wins ties (see
-    // TIE_BREAK_ORDER) — an actual suppression is needed, not just an added competing score.
+    // A future-commitment prefix immediately before one of these verbs means the SENDER is
+    // committing to do it themselves — a WAITING follow-up, not a request aimed at the
+    // recipient — even though the bare verb also appears in ACTION_VERBS. Real notifications
+    // ("I'll call you back after the meeting", "gonna send the file soon") were scoring ACTION
+    // because the only competing WAITING signal (the generic "i will" catch-all below) merely
+    // TIES the verb's own ACTION score, and ACTION wins ties (see TIE_BREAK_ORDER) — an actual
+    // suppression is needed, not just an added competing score.
+    //
+    // Deliberately subject-agnostic ("will" alone, not just "i will"/"i'll") so a third-person
+    // commitment reported secondhand ("she said she will call back", "the team will confirm
+    // shortly") suppresses the verb the same way a first-person one does — real-device testing
+    // and hand-written diverse examples both surfaced this class of commitment, and there's no
+    // reason the subject pronoun should matter to whether it's a commitment. "bout to"/"about
+    // to"/"fixing to" are casual/regional equivalents of "going to" that TextNormalizer doesn't
+    // expand (unlike "gonna"), so they're listed explicitly.
     private fun futureCommitmentPattern(verb: String): String =
-        "\\b(?:i'll|i will|going to)\\s+${Regex.escape(verb)}\\b"
+        "\\b(?:i'll|will|going to|bout to|about to|fixing to)\\s+${Regex.escape(verb)}\\b"
 
     // See the suppression check in scoreAction(): these verbs double as the head word of a
     // more specific REPLY/WAITING phrase, or of promotional call-to-action framing, so that
     // phrase already "owns" the word.
     private val ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = mapOf(
-        "call" to Regex("\\bcall me\\b|${futureCommitmentPattern("call")}"),
+        // "final call"/"last call" is a deadline idiom ("last chance"), not a literal request
+        // to phone someone — without this, "call" ties DEADLINE's own score on phrases like
+        // "Final call — offer expires at midnight." and badly undercuts confidence even though
+        // the tie-break still lands on the right category (see computeConfidence's doc: a
+        // near-tie is scored as low-confidence regardless of which side the tie-break favors).
+        "call" to Regex("\\bcall me\\b|\\b(?:final|last) call\\b|${futureCommitmentPattern("call")}"),
         "check" to Regex(
             futureCommitmentPattern("check") +
                 // "new update available - check it out" is promotional framing, not a literal
                 // command directed at the recipient — a genuine imperative reads "check X"
                 // (an object), not the idiomatic "check it out".
-                "|\\bcheck it out\\b"
+                "|\\bcheck it out\\b" +
+                // "give me a moment to check on that" — a WAITING commitment-to-look-into-it
+                // phrased as "[a] moment/second/minute/sec to check", not a request directed
+                // at the recipient.
+                "|\\b(?:a\\s+)?(?:moment|second|minute|sec)\\s+to\\s+check\\b"
         ),
         // Only suppress when confirming something about the recipient themselves (receipt,
         // attendance, agreement — "confirm you received/got/are coming"), which is a REPLY-
@@ -724,21 +745,62 @@ object NotificationClassifier {
     private val REQUEST_MARKERS = phrases("can you", "could you", "would you", "need you to")
 
     private val WAITING_PATTERNS: List<Regex> = phrases(
-        "i'll send", "i will", "i'll check", "i'll get back to you",
+        "i'll send", "i will", "i'll check", "i'll get back to you", "i'll have",
         // Generalized from the object-literal "expect it"/"i'll bring it", which only
         // matched when the object was literally "it" and missed "expect the file"/"i'll
         // bring the presentation" — these match the verb+commitment structure regardless
         // of what's being expected/brought, consistent with how "i'll send"/"i'll check"
         // already don't require a specific object.
-        "should expect", "i'll bring",
-        "should arrive", "we're working on it", "i'm working on", "i am working on",
-        "on it", "will do", "will send", "will get back", "will reply"
+        "should expect", "i'll bring", "should have",
+        "should arrive", "i'm working on", "i am working on", "we're working on",
+        "we are working on", "working through it",
+        "on it", "will do", "will send", "will get back", "will reply",
+        // Formal/third-person commitment idioms — deliberately NOT anchored to "i" the way
+        // "i'll .../i will" above are, since a formal or secondhand commitment is routinely
+        // phrased "we will.../the team will.../she'll..." rather than "I will..." (see
+        // futureCommitmentPattern's doc for the parallel reasoning on the verb-suppression
+        // side). None of these collide with an ACTION_VERBS word, so no suppression entry is
+        // needed for them the way call/send/check/confirm/bring need one.
+        "will have", "will follow up", "will keep you posted",
+        // Short "give me a moment"-family and progress-status idioms — real-device and
+        // hand-written diverse examples turned up a cluster of these with no existing
+        // coverage at all (falling through to the FYI/zero-signal default), distinct from
+        // the "check"-suppression fix above which only covers the case where "check" is
+        // literally the following verb.
+        "give me a moment", "give me a second", "give me a minute",
+        "one moment", "one sec", "one second", "almost done", "about done",
+        "hang tight", "hold up", "in progress"
     ) + listOf(
         // "expect it in your inbox shortly" — a bare "expect" commitment without the "should"
         // prefix above. Scoped to "expect + a determiner/pronoun" (it/the/your/this/that)
         // rather than the bare word "expect", which appears in enough unrelated contexts
         // ("what did you expect") to be too broad on its own.
         Regex("\\bexpect\\s+(?:it|the|your|this|that)\\b"),
+        // "on my way", "on the way", "on his way", "on her way", "on their way" — a delivery/
+        // arrival commitment-in-progress, whoever it's about ("otw with the docs" normalizes
+        // to "on the way..." via TextNormalizer).
+        Regex("\\bon (?:my|his|her|their|the) way\\b"),
+        // "circle back"/"circling back" — a common formal follow-up idiom independent of
+        // subject or tense form.
+        Regex("\\bcircl(?:e|ing) back\\b"),
+        // "will reach out"/"will reach back out" — "back" is a common but optional insertion.
+        Regex("\\bwill reach (?:back )?out\\b"),
+        // "will respond" — a formal commitment-to-reply idiom, distinct from REPLY's own
+        // patterns (those are the RECIPIENT being asked to respond; this is the SENDER
+        // committing to respond).
+        Regex("\\bwill respond\\b"),
+        // "look into"/"looking into" — bare, not anchored to "will", since this idiom is just
+        // as much a commitment in present-progressive form ("we're looking into this") as in
+        // the future-tense "will look into" phrasing.
+        Regex("\\blook(?:ing)?\\s+into\\b"),
+        // "hit you back" ("hit u back" normalizes "u"→"you") — a casual "I'll get back to
+        // you" idiom.
+        Regex("\\bhit you back\\b"),
+        // A bare casual/regional "about to do something" marker with no object requirement —
+        // covers commitments built on a verb outside ACTION_VERBS entirely (e.g. "fixing to
+        // head out with the package"), which futureCommitmentPattern's per-verb entries below
+        // don't reach since they're scoped to the specific verbs that need ACTION suppression.
+        Regex("\\b(?:bout to|about to|fixing to)\\b"),
         // "I'll call you back", "gonna send the file soon" (normalizes to "going to send...")
         // — see futureCommitmentPattern's doc on ACTION_VERB_SUPPRESSED_BY for why a real
         // WAITING match is needed here, not just suppressing the verb's ACTION score.
@@ -762,9 +824,9 @@ object NotificationClassifier {
     // Broader than DEADLINE_STANDALONE_DATE_PATTERNS — used only to populate extractedDate, not scoring.
     private val EXTRACT_DATE_PATTERN = Regex(
         "\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight|" +
-            "end of month|end of week|next week|" +
+            "midnight|noon|end of (?:the )?month|end of (?:the )?week|next week|" +
             "january|february|march|april|may|june|july|august|september|october|november|december|" +
-            "\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?|\\d{1,2}(?::\\d{2})?\\s?(?:am|pm))\\b",
+            "\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?|\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}(?:st|nd|rd|th))\\b",
         RegexOption.IGNORE_CASE
     )
 }

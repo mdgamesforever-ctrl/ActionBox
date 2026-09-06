@@ -99,6 +99,8 @@ object TextNormalizer {
         // Exclamations / reactions
         "omg" to "oh my god",
         "omw" to "on my way",
+        "otw" to "on the way",
+        "abt" to "about",
         "brb" to "be right back",
         "gtg" to "got to go",
         "g2g" to "got to go",
