@@ -90,6 +90,7 @@ interface NotificationDao {
         sourceApp: String,
         sender: String,
         text: String,
+        normalizedText: String,
         timestamp: Long,
         capturedAt: Long,
         recentWindowMs: Long
@@ -114,6 +115,7 @@ interface NotificationDao {
                 sourceApp = sourceApp,
                 sender = sender,
                 text = text,
+                normalizedText = normalizedText,
                 timestamp = timestamp,
                 capturedAt = capturedAt
             )

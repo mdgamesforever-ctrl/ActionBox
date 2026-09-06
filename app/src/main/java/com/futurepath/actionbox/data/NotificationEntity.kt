@@ -28,6 +28,9 @@ data class NotificationEntity(
     val sourceApp: String,
     val sender: String,
     val text: String,
+    // TextNormalizer's output for [text] — lowercased, de-stretched, slang-expanded.
+    // Classification runs against this, not the raw text; [text] is kept as-is for display.
+    val normalizedText: String,
     val timestamp: Long,
     // Device wall-clock time this row was inserted — distinct from [timestamp], which is
     // the message's own timestamp. Lets a later duplicate lookup show whether it collided

@@ -2,6 +2,7 @@ package com.futurepath.actionbox.data
 
 import android.content.Context
 import com.futurepath.actionbox.classification.NotificationClassifier
+import com.futurepath.actionbox.classification.TextNormalizer
 import kotlinx.coroutines.flow.Flow
 
 class NotificationRepository(context: Context) {
@@ -27,18 +28,20 @@ class NotificationRepository(context: Context) {
      * coroutine the caller launched) and the row is updated with its result.
      */
     suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long, receivedAt: Long) {
+        val normalizedText = TextNormalizer.normalize(text)
         val result = dao.captureIfNew(
             notificationKey = notificationKey,
             sourceApp = sourceApp,
             sender = sender,
             text = text,
+            normalizedText = normalizedText,
             timestamp = timestamp,
             capturedAt = receivedAt,
             recentWindowMs = CROSS_SOURCE_WINDOW_MS
         )
 
         if (result.insertedRowId != -1L) {
-            val classification = NotificationClassifier.classify(sourceApp, sender, text)
+            val classification = NotificationClassifier.classify(sourceApp, sender, normalizedText)
             dao.updateClassification(
                 id = result.insertedRowId,
                 state = classification.state,
