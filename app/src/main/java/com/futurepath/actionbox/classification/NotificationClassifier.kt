@@ -62,10 +62,30 @@ object NotificationClassifier {
         // generic text heuristic.
         val isPublicContext = isPublicBroadcastContext(sourceApp, sender)
 
+        // Package-identity priors for FYI/DEADLINE: a calendar app's notifications are
+        // essentially never ACTION/WAITING/REPLY/NOISE, but word-based scoring alone can't
+        // always tell a status update ("meeting moved") from an actual deadline ("meeting in
+        // 10 minutes") — this nudges BOTH candidates so whichever already has word-based
+        // support (see scoreDeadline/FYI_PATTERNS) wins the internal split, rather than trying
+        // to duplicate that decision here. A banking transaction template (see
+        // isBankingTransactionTemplate) is a stronger, mutually-exclusive signal that routes to
+        // exactly one of the two depending on whether due-language is present, so it's computed
+        // separately below rather than folded into this generic calendar-style split.
+        val isCalendarPackage = sourceApp in CALENDAR_PACKAGES
+        val calendarBonus = if (isCalendarPackage) CALENDAR_PACKAGE_WEIGHT else 0
+
+        val bankingTemplateHit = isBankingTransactionTemplate(lowerText)
+        val bankingTemplateHasDueLanguage = bankingTemplateHit &&
+            (DUE_PATTERNS.any { it.containsMatchIn(lowerText) } || BY_DEADLINE_PATTERN.containsMatchIn(lowerText))
+        val bankingFyiBonus = if (bankingTemplateHit && !bankingTemplateHasDueLanguage) BANKING_TEMPLATE_WEIGHT else 0
+        val bankingDeadlineBonus = if (bankingTemplateHasDueLanguage) BANKING_TEMPLATE_WEIGHT else 0
+
+        val deliveryTemplateBonus = if (isDeliveryStatusTemplate(sender, lowerText)) DELIVERY_TEMPLATE_WEIGHT else 0
+
         val baseScores = mapOf(
             ClassifiedState.NOISE to scoreNoise(sourceApp, sender, lowerText, isPublicContext),
-            ClassifiedState.FYI to score(lowerText, FYI_PATTERNS),
-            ClassifiedState.DEADLINE to scoreDeadline(lowerText),
+            ClassifiedState.FYI to score(lowerText, FYI_PATTERNS) + calendarBonus + bankingFyiBonus + deliveryTemplateBonus,
+            ClassifiedState.DEADLINE to scoreDeadline(lowerText) + calendarBonus + bankingDeadlineBonus,
             ClassifiedState.ACTION to dampenInPublicContext(scoreAction(lowerText), isPublicContext),
             ClassifiedState.WAITING to score(lowerText, WAITING_PATTERNS),
             ClassifiedState.REPLY to dampenInPublicContext(score(lowerText, REPLY_PATTERNS), isPublicContext)
@@ -204,6 +224,13 @@ object NotificationClassifier {
 
     private fun scoreNoise(sourceApp: String, sender: String, lowerText: String, isPublicContext: Boolean): Int {
         val packageScore = if (sourceApp in NOISE_PACKAGES) NOISE_PACKAGE_WEIGHT else 0
+        // Known gaming-app packages default hard toward NOISE: daily-reward/event notifications
+        // ("Claim your daily reward!", "Event ends in 3 hours!") linguistically mimic ACTION's
+        // imperatives and DEADLINE's countdown language worse than ordinary promo text does, so
+        // word-based scoring alone is the LEAST reliable place to catch these — the app's own
+        // identity is the stronger signal here. Weighted just under NOISE_PACKAGE_WEIGHT (not
+        // equal to it) so a genuinely strong word-based signal can still win a real edge case.
+        val gamingPackageScore = if (sourceApp in GAMING_PACKAGES) GAMING_PACKAGE_NOISE_WEIGHT else 0
         // Automated bot/broadcast content (a Discord raid-reminder bot, a giveaway-announcement
         // bot) should read as NOISE regardless of its surface phrasing — a bot's giveaway rules
         // text can look WAITING-ish, a raid-timer roster dump can look DEADLINE-ish, but neither
@@ -212,15 +239,95 @@ object NotificationClassifier {
         // automated" is a much stronger signal than "merely public" — a human's public Reddit
         // post still deserves its own category, an automated bot dump generally doesn't.
         val botScore = if (isBotOrMassMentionContent(sender, lowerText)) BOT_CONTENT_NOISE_WEIGHT else 0
+        // Catches an UNNAMED bot/webhook by its formatting shape rather than its sender name —
+        // see isBotFormattedContent's doc. A real signal but a softer one than a literal "bot"
+        // sender/mass-mention match above (inferred from format rather than stated outright),
+        // so it's weighted lower to stay beatable by a strong word-based signal in a genuine
+        // edge case, consistent with every other new structural signal in this function.
+        val botFormatScore = if (isBotFormattedContent(lowerText)) BOT_FORMAT_NOISE_WEIGHT else 0
+        // The sender IS the app/brand itself (an Instagram engagement ping, not a friend's DM)
+        // rather than a human contact — see isImpersonalSender's doc.
+        val impersonalSenderScore = if (isImpersonalSender(sourceApp, sender)) IMPERSONAL_SENDER_NOISE_WEIGHT else 0
+        // A noreply/do-not-reply address marks a fully automated sender, the same underlying
+        // idea as a "bot"-named sender or a mass mention — but deliberately NOT folded into
+        // isBotOrMassMentionContent's hard-override weight: unlike a Discord bot dump (almost
+        // always genuine noise/broadcast), a noreply@ address routinely sends perfectly
+        // legitimate FYI/DEADLINE content — bank transaction alerts, delivery confirmations,
+        // calendar invites are commonly sent "noreply" too. Overriding those outright would
+        // fight directly against the banking/delivery/calendar signals above, which exist
+        // specifically to route this kind of automated-but-legitimate content correctly. Kept
+        // at the same weight as the impersonal-sender bias instead, so it nudges rather than
+        // drowns out a real FYI/DEADLINE signal on the same message.
+        val noreplyScore = if (NOREPLY_EMAIL_PATTERN.containsMatchIn(sender)) IMPERSONAL_SENDER_NOISE_WEIGHT else 0
         // A public post/broadcast that doesn't otherwise match a specific NOISE phrase is
         // still more likely informational/promotional than a personal request — a light bias,
         // not a hard override (see dampenInPublicContext's doc for the contrast with bots).
         val publicContextScore = if (isPublicContext) PUBLIC_CONTEXT_NOISE_BOOST else 0
-        return packageScore + botScore + publicContextScore + score(lowerText, NOISE_PATTERNS)
+        return packageScore + gamingPackageScore + botScore + botFormatScore + impersonalSenderScore +
+            noreplyScore + publicContextScore + score(lowerText, NOISE_PATTERNS)
     }
 
     private fun isBotOrMassMentionContent(sender: String, lowerText: String): Boolean =
         BOT_SENDER_PATTERN.containsMatchIn(sender) || MASS_MENTION_PATTERN.containsMatchIn(lowerText)
+
+    /**
+     * True when [sender] textually IS the app's own brand (e.g. sourceApp is Instagram and
+     * sender is "Instagram") rather than a human contact — the generalizable version of "this
+     * notification is the app pinging you" that applies across social engagement pings, some
+     * delivery/banking status senders, and beyond. A word-boundary match against a small,
+     * curated per-package name list (not a generic "looks corporate" heuristic) to keep false
+     * positives near zero — a friend's contact name essentially never collides with an app's
+     * own brand name.
+     */
+    private fun isImpersonalSender(sourceApp: String, sender: String): Boolean {
+        val brandNames = APP_OWN_SENDER_NAMES[sourceApp] ?: return false
+        return brandNames.any { brand -> Regex("\\b${Regex.escape(brand)}\\b", RegexOption.IGNORE_CASE).containsMatchIn(sender) }
+    }
+
+    /**
+     * Detects an automated Discord-style bot/webhook dump by its FORMATTING SHAPE rather than
+     * its sender name, so an unnamed bot ("Server Assistant", not "RaidBot") is still caught.
+     * Requires at least two of: high @mention density, emoji used as a visual header/bullet,
+     * and colon-delimited stat/field pairs ("Kills: 12", "Time Left: 2h") — any ONE of these
+     * alone is something a normal enthusiastic human message could plausibly contain, but the
+     * combination is a genuine template fingerprint. Deliberately doesn't attempt to detect
+     * "near-identical structure repeated across messages from the same sender" — this function
+     * is a pure function of a single notification's text, with no access to the sender's prior
+     * message history, so that part of the fingerprint is out of scope here.
+     */
+    private fun isBotFormattedContent(lowerText: String): Boolean {
+        val highMentionDensity = MENTION_PATTERN.findAll(lowerText).count() >= 2
+        val hasEmojiHeader = EMOJI_PATTERN.containsMatchIn(lowerText)
+        val hasStatPairs = STAT_PAIR_PATTERN.findAll(lowerText).count() >= 2
+        return listOf(highMentionDensity, hasEmojiHeader, hasStatPairs).count { it } >= 2
+    }
+
+    /**
+     * A masked account number + a currency amount + a "balance" keyword together are close to
+     * a deterministic fingerprint of a bank transaction alert ("$500 debited from A/c ****1234,
+     * Avail Bal: $2,300") — real bank SMS/push templates are this formulaic. Requires all
+     * three since any one alone is common in unrelated text (e.g. "balance" in "work-life
+     * balance"); the combination essentially only occurs in this exact template.
+     */
+    private fun isBankingTransactionTemplate(lowerText: String): Boolean =
+        MASKED_ACCOUNT_PATTERN.containsMatchIn(lowerText) &&
+            CURRENCY_AMOUNT_PATTERN.containsMatchIn(lowerText) &&
+            BALANCE_KEYWORD_PATTERN.containsMatchIn(lowerText)
+
+    /**
+     * A delivery/shipping status update's structural fingerprint: an order/tracking number, a
+     * known carrier/retailer as the sender, and a past-tense completed-status verb. Requires
+     * only two of the three (not all three) — real notifications routinely drop one, e.g.
+     * "Package delivered." from sender "Amazon" has no order number at all, which is exactly
+     * the real-device case this generalizes beyond (previously only caught by the literal
+     * phrase "package delivered" in FYI_PATTERNS).
+     */
+    private fun isDeliveryStatusTemplate(sender: String, lowerText: String): Boolean {
+        val hasOrderNumber = ORDER_NUMBER_PATTERN.containsMatchIn(lowerText)
+        val hasBrandSender = DELIVERY_BRAND_SENDER_PATTERN.containsMatchIn(sender)
+        val hasStatusVerb = DELIVERY_STATUS_VERB_PATTERN.containsMatchIn(lowerText)
+        return listOf(hasOrderNumber, hasBrandSender, hasStatusVerb).count { it } >= 2
+    }
 
     private fun scoreDeadline(lowerText: String): Int {
         // "should arrive by tonight" / "expect it by 5pm" — a WAITING delivery-commitment
@@ -347,6 +454,19 @@ object NotificationClassifier {
     // A light bias, not a hard override — see dampenInPublicContext's doc.
     private const val PUBLIC_CONTEXT_NOISE_BOOST = 2
     private const val PUBLIC_CONTEXT_PERSONAL_PENALTY = 3
+    // Structural-signal weights (metadata/format-based priors rather than word content) — see
+    // each is-check's doc for why it's calibrated where it is. All are sized to beat the
+    // ordinary word-based scores they're meant to override in typical cases (DEFAULT_WEIGHT=2,
+    // ACTION_VERB_WEIGHT=2, DUE_WEIGHT/DATE_WEIGHT=2) while still being beatable by a
+    // genuinely strong multi-signal word-based cluster, per the "prior, not hard override"
+    // requirement — deliberately kept below BOT_CONTENT_NOISE_WEIGHT/NOISE_PACKAGE_WEIGHT
+    // (10), which are the one pre-existing pair of signals meant to win outright.
+    private const val IMPERSONAL_SENDER_NOISE_WEIGHT = 3
+    private const val BOT_FORMAT_NOISE_WEIGHT = 6
+    private const val GAMING_PACKAGE_NOISE_WEIGHT = 8
+    private const val CALENDAR_PACKAGE_WEIGHT = 2
+    private const val BANKING_TEMPLATE_WEIGHT = 6
+    private const val DELIVERY_TEMPLATE_WEIGHT = 5
 
     private fun phrases(vararg raw: String): List<Regex> = raw.map { Regex("\\b${Regex.escape(it)}\\b") }
 
@@ -377,6 +497,84 @@ object NotificationClassifier {
     // A mass ping ("@everyone", "@here") is addressed to an entire server/channel, never to
     // the recipient individually — a strong automated/broadcast signal regardless of sender.
     private val MASS_MENTION_PATTERN = Regex("@(?:everyone|here)\\b", RegexOption.IGNORE_CASE)
+
+    // A noreply/do-not-reply address is a well-known convention for a fully automated sender —
+    // see scoreNoise's noreplyScore for why it's a moderate bias rather than folded into
+    // isBotOrMassMentionContent's stronger override.
+    private val NOREPLY_EMAIL_PATTERN = Regex("\\b(?:no-?reply|do-?not-?reply)@", RegexOption.IGNORE_CASE)
+
+    // Any @mention-shaped token, not just the mass-ping forms above — used only to gauge
+    // mention DENSITY for isBotFormattedContent, not as a standalone signal on its own.
+    private val MENTION_PATTERN = Regex("@[\\w-]+")
+
+    // A visual-header/bullet emoji range covering the common Discord bot-embed decorations
+    // (🎉📢⏰🔥) — see isBotFormattedContent.
+    private val EMOJI_PATTERN = Regex("[\\x{1F300}-\\x{1FAFF}\\x{2600}-\\x{27BF}]")
+
+    // "Kills: 12", "Time Left: 2h" — a colon-delimited label/number pair, the shape of a bot's
+    // stat tracker or field list. Used only as one of isBotFormattedContent's cues.
+    private val STAT_PAIR_PATTERN = Regex("[a-z]+:\\s*\\d+", RegexOption.IGNORE_CASE)
+
+    // See isImpersonalSender: apps where the notification's "sender" field is sometimes the
+    // app/brand's own name (an engagement ping) rather than a human contact (a DM from a
+    // friend through the same app/package). Deliberately a small, curated list of an app's
+    // OWN name(s) — not a generic "sounds corporate" word list — to keep false positives
+    // against real human contact names near zero. NOT extended to apps like Amazon's shopping
+    // app where every notification's sender is the brand regardless of content (there's no
+    // personal-contact channel to distinguish from, so this check would flag genuine delivery
+    // FYIs as impersonal too — see isDeliveryStatusTemplate for how that domain is handled).
+    private val APP_OWN_SENDER_NAMES: Map<String, Set<String>> = mapOf(
+        "com.instagram.android" to setOf("instagram"),
+        "com.zhiliaoapp.musically" to setOf("tiktok"),
+        "com.facebook.katana" to setOf("facebook"),
+        "com.twitter.android" to setOf("twitter", "x"),
+        "com.google.android.youtube" to setOf("youtube"),
+        "com.pinterest" to setOf("pinterest"),
+        "com.snapchat.android" to setOf("snapchat")
+    )
+
+    // Known gaming-app packages — see scoreNoise's doc for why package identity is trusted
+    // over word content here. Real-world package names (not the synthetic corpus's
+    // "com.example.gameapp" placeholder, which a real device would never emit).
+    private val GAMING_PACKAGES = setOf(
+        "com.king.candycrushsaga",
+        "com.supercell.clashofclans",
+        "com.supercell.clashroyale",
+        "com.mojang.minecraftpe",
+        "com.nianticlabs.pokemongo",
+        "com.rovio.angrybirds",
+        "com.king.candycrushsodasaga"
+    )
+
+    // See scoreCategories' calendarBonus: known calendar/scheduling app packages.
+    private val CALENDAR_PACKAGES = setOf(
+        "com.google.android.calendar",
+        "com.samsung.android.calendar"
+    )
+
+    // "****1234", "XXXX6791", "A/c XXXX6791" — a masked/partial account number, part of
+    // isBankingTransactionTemplate's fingerprint.
+    private val MASKED_ACCOUNT_PATTERN = Regex("(?:\\*{2,}|x{2,})\\d{2,6}\\b", RegexOption.IGNORE_CASE)
+
+    // "$500", "Rs.248,759.00", "₹500" — a currency symbol/code followed by an amount.
+    private val CURRENCY_AMOUNT_PATTERN = Regex("(?:[$€£₹]|\\brs\\.?)\\s?[\\d,]+(?:\\.\\d+)?", RegexOption.IGNORE_CASE)
+
+    // "Avail Bal:", "Available Balance", bare "balance" — the third leg of the banking
+    // template fingerprint.
+    private val BALANCE_KEYWORD_PATTERN = Regex("\\bbal(?:ance)?\\b", RegexOption.IGNORE_CASE)
+
+    // "#12345" — an order/tracking number, part of isDeliveryStatusTemplate's fingerprint.
+    private val ORDER_NUMBER_PATTERN = Regex("#\\d{3,}")
+
+    // A known carrier/retailer as the SENDER (not just mentioned in the body) — the other half
+    // of isDeliveryStatusTemplate's fingerprint, checked against the sender field.
+    private val DELIVERY_BRAND_SENDER_PATTERN = Regex("\\b(?:amazon|ups|fedex|dhl|usps|dpd)\\b", RegexOption.IGNORE_CASE)
+
+    // "shipped", "delivered", "out for delivery" — completed/in-progress status, not a request.
+    private val DELIVERY_STATUS_VERB_PATTERN = Regex(
+        "\\b(?:shipped|delivered|dispatched|out for delivery)\\b",
+        RegexOption.IGNORE_CASE
+    )
 
     private val NOISE_PATTERNS: List<Regex> = phrases(
         "new video", "recommended for you", "sale", "promotion", "trending", "suggested post",
