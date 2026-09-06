@@ -32,11 +32,12 @@ interface NotificationDao {
     @Query(
         """
         UPDATE captured_notifications
-        SET classifiedState = :state, extractedSummary = :summary, extractedDate = :date, isProcessed = 1
+        SET classifiedState = :state, extractedSummary = :summary, extractedDate = :date,
+            confidenceScore = :confidence, isProcessed = 1
         WHERE id = :id
         """
     )
-    suspend fun updateClassification(id: Long, state: ClassifiedState, summary: String?, date: String?)
+    suspend fun updateClassification(id: Long, state: ClassifiedState, summary: String?, date: String?, confidence: Int)
 
     @Query(
         """

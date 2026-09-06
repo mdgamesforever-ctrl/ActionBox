@@ -46,7 +46,8 @@ class NotificationRepository(context: Context) {
                 id = result.insertedRowId,
                 state = classification.state,
                 summary = classification.summary,
-                date = classification.date
+                date = classification.date,
+                confidence = classification.confidence
             )
         }
     }

@@ -41,5 +41,7 @@ data class NotificationEntity(
     // Set by NotificationClassifier shortly after capture; null until then.
     val classifiedState: ClassifiedState? = null,
     val extractedSummary: String? = null,
-    val extractedDate: String? = null
+    val extractedDate: String? = null,
+    // 0-100, set alongside classifiedState. See NotificationClassifier.computeConfidence.
+    val confidenceScore: Int? = null
 )

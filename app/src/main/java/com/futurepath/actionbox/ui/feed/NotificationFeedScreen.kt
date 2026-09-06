@@ -16,11 +16,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
+import com.futurepath.actionbox.classification.ConfidenceTier
 import com.futurepath.actionbox.data.NotificationEntity
 import java.text.DateFormat
 import java.util.Date
@@ -61,7 +67,15 @@ fun NotificationFeedScreen(notifications: List<NotificationEntity>) {
 
 @Composable
 private fun NotificationRow(notification: NotificationEntity) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val attentionTier = notification.confidenceScore
+        ?.let { ConfidenceTier.fromScore(it) }
+        ?.takeIf { it == ConfidenceTier.UNCERTAIN || it == ConfidenceTier.LOW }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { base -> attentionTier?.let { base.dashedBorder(attentionColor(it)) } ?: base }
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Column {
                 Text(text = notification.sourceApp, style = MaterialTheme.typography.labelMedium)
@@ -77,6 +91,14 @@ private fun NotificationRow(notification: NotificationEntity) {
                 Text(
                     text = "Summary: $summary",
                     style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            attentionTier?.let { tier ->
+                Text(
+                    text = attentionLabel(tier, notification.confidenceScore ?: 0),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = attentionColor(tier),
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -109,3 +131,28 @@ private fun badgeColor(state: ClassifiedState): Color = when (state) {
     ClassifiedState.FYI -> Color(0xFF757575)
     ClassifiedState.NOISE -> Color(0xFFBDBDBD)
 }
+
+private fun attentionColor(tier: ConfidenceTier): Color = when (tier) {
+    ConfidenceTier.LOW -> Color(0xFFC62828)
+    else -> Color(0xFFF9A825) // UNCERTAIN
+}
+
+private fun attentionLabel(tier: ConfidenceTier, score: Int): String = when (tier) {
+    ConfidenceTier.LOW -> "⚠ Needs review — low confidence ($score%)"
+    ConfidenceTier.UNCERTAIN -> "❓ Not sure? — tap to verify ($score%)"
+    else -> ""
+}
+
+/** Dashed outline distinguishing a low/uncertain-confidence row from a normal card. */
+private fun Modifier.dashedBorder(color: Color, strokeWidth: Dp = 1.5.dp, cornerRadius: Dp = 8.dp): Modifier =
+    drawWithContent {
+        drawContent()
+        drawRoundRect(
+            color = color,
+            style = Stroke(
+                width = strokeWidth.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+            ),
+            cornerRadius = CornerRadius(cornerRadius.toPx())
+        )
+    }

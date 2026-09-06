@@ -4,7 +4,9 @@ package com.futurepath.actionbox.classification
 data class ClassificationResult(
     val state: ClassifiedState,
     val summary: String?,
-    val date: String?
+    val date: String?,
+    /** 0-100. See [NotificationClassifier.computeConfidence] for how it's derived. */
+    val confidence: Int
 )
 
 /**
@@ -29,17 +31,15 @@ object NotificationClassifier {
         )
 
         val topScore = scores.values.max()
-        if (topScore <= 0) {
-            // No signal fired for anything — REPLY is the safe default for an ambiguous
-            // direct message, not whichever category happens to be listed first.
-            return ClassificationResult(ClassifiedState.REPLY, summary = null, date = extractDate(text))
-        }
-
         // Among categories tied for the top score, prefer the more actionable/urgent one —
         // a message that's plausibly both a deadline and an FYI is more useful surfaced as
         // a deadline. NOISE is checked first since a strong app-level signal should win
-        // outright rather than lose a tie to a coincidental keyword elsewhere.
+        // outright rather than lose a tie to a coincidental keyword elsewhere. When every
+        // category scores 0, this arbitrarily lands on NOISE, but confidence will be 0 too
+        // (below the LOW threshold), so the fallback below always overrides it to FYI.
         val winner = TIE_BREAK_ORDER.first { scores[it] == topScore }
+        val runnerUpScore = scores.filterKeys { it != winner }.values.maxOrNull() ?: 0
+        val confidence = computeConfidence(topScore, runnerUpScore)
 
         val date = extractDate(text)
         val summary = when (winner) {
@@ -47,7 +47,28 @@ object NotificationClassifier {
                 extractSummary(text, sender)
             else -> null
         }
-        return ClassificationResult(winner, summary, date)
+
+        // Below the LOW threshold, don't trust the winning category at all — fall back to
+        // FYI as the safe default. The confidence score itself is kept as computed (still
+        // <55) so the UI can mark this row as needing review, and the summary/date already
+        // extracted from the (uncertain) winner are still surfaced as a hint.
+        val finalState = if (confidence < CONFIDENCE_LOW_THRESHOLD) ClassifiedState.FYI else winner
+        return ClassificationResult(finalState, summary, date, confidence)
+    }
+
+    /**
+     * Confidence blends two things: the margin by which the winner beat the runner-up
+     * (0 = a dead tie, 1 = the runner-up scored nothing at all) and the winner's absolute
+     * score relative to [STRENGTH_CAP] (a lone weak match shouldn't score as confidently as
+     * a cluster of strong ones, even with zero competition). Margin is weighted higher
+     * since "is this actually the right category" matters more than "how much evidence."
+     */
+    private fun computeConfidence(winnerScore: Int, runnerUpScore: Int): Int {
+        if (winnerScore <= 0) return 0
+        val marginRatio = (winnerScore - runnerUpScore).toFloat() / winnerScore
+        val strengthRatio = (winnerScore.toFloat() / STRENGTH_CAP).coerceAtMost(1f)
+        val raw = 100 * (MARGIN_WEIGHT * marginRatio + STRENGTH_WEIGHT * strengthRatio)
+        return raw.toInt().coerceIn(0, 100)
     }
 
     private val TIE_BREAK_ORDER = listOf(
@@ -127,6 +148,10 @@ object NotificationClassifier {
     private const val ACTION_VERB_WEIGHT = 2
     private const val ACTION_DIRECTED_BONUS = 1
     private const val ACTION_REQUEST_MARKER_BONUS = 2
+    private const val STRENGTH_CAP = 8f
+    private const val MARGIN_WEIGHT = 0.6f
+    private const val STRENGTH_WEIGHT = 0.4f
+    private const val CONFIDENCE_LOW_THRESHOLD = 55
 
     private fun phrases(vararg raw: String): List<Regex> = raw.map { Regex("\\b${Regex.escape(it)}\\b") }
 
