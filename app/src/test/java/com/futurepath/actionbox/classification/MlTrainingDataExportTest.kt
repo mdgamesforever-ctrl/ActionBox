@@ -44,7 +44,10 @@ class MlTrainingDataExportTest {
      * including them. RealDatasetCorpus rows all carry variantIndex 0 (each is a single real
      * example, not a substitution-variant family), so it contributes one "template" per row
      * for held-out purposes — appropriate since there's no sibling-variant leakage risk within
-     * real text the way there is for templated/substituted text.
+     * real text the way there is for templated/substituted text. [HandAuthoredDiversityCorpus]
+     * (hand-composed sentences targeting the ACTION/REPLY/WAITING categories specifically — see
+     * that file's doc for its scope) is appended the same way as RealDatasetCorpus, one
+     * "template" per row.
      */
     @Test
     fun exportNormalizedCorpus() {
@@ -55,10 +58,18 @@ class MlTrainingDataExportTest {
         val diverseOffset = syntheticOffset + DiverseNotificationCorpus.templates.size
         val real = RealDatasetCorpus.buildCorpus()
             .mapIndexed { i, case -> case.copy(templateIndex = diverseOffset + i) }
+        val realOffset = diverseOffset + real.size
+        val handAuthored = HandAuthoredDiversityCorpus.buildCorpus()
+            .mapIndexed { i, case -> case.copy(templateIndex = realOffset + i) }
 
         val sb = StringBuilder()
         sb.appendLine("templateIndex\tlabel\tsourceApp\tsender\tsource\tnormalizedText")
-        for ((cases, source) in listOf(synthetic to "synthetic", diverse to "diverse", real to "real")) {
+        for ((cases, source) in listOf(
+            synthetic to "synthetic",
+            diverse to "diverse",
+            real to "real",
+            handAuthored to "handauthored"
+        )) {
             for (case in cases) {
                 val normalized = TextNormalizer.normalize(case.text)
                 sb.appendLine("${case.templateIndex}\t${case.expected}\t${case.sourceApp}\t${case.sender}\t$source\t$normalized")
@@ -68,8 +79,9 @@ class MlTrainingDataExportTest {
             parentFile?.mkdirs()
             writeText(sb.toString())
         }
-        println("Exported ${synthetic.size} synthetic + ${diverse.size} diverse + ${real.size} real = " +
-            "${synthetic.size + diverse.size + real.size} examples to build/ml-training-data.tsv")
+        println("Exported ${synthetic.size} synthetic + ${diverse.size} diverse + ${real.size} real + " +
+            "${handAuthored.size} handauthored = " +
+            "${synthetic.size + diverse.size + real.size + handAuthored.size} examples to build/ml-training-data.tsv")
     }
 
     /**
