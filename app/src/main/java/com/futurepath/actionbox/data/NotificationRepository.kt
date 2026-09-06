@@ -1,33 +1,19 @@
 package com.futurepath.actionbox.data
 
 import android.content.Context
+import com.futurepath.actionbox.classification.NotificationClassifier
 import kotlinx.coroutines.flow.Flow
-
-data class CaptureOutcome(
-    val wasInserted: Boolean,
-    // Human-readable explanation of why the insert was ignored, or null if it succeeded.
-    val conflictDetail: String?
-)
 
 class NotificationRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).notificationDao()
-    private val debugEventDao = AppDatabase.getInstance(context).notificationDebugEventDao()
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
-
-    fun observeCapturedCount(): Flow<Int> = dao.observeCount()
-
-    fun observeDebugEvents(): Flow<List<NotificationDebugEvent>> = debugEventDao.observeAll()
-
-    suspend fun logDebugEvent(event: NotificationDebugEvent) {
-        debugEventDao.insert(event)
-    }
 
     /**
      * Delegates the whole check-then-insert sequence to [NotificationDao.captureIfNew],
      * which runs it as a single Room transaction so concurrent calls can't race each other
-     * (see that method's doc). Two checks run inside that transaction before the insert:
+     * (see that method's doc):
      *  1. Bounded-recency content match: the same real message can reach
      *     onNotificationPosted via two genuinely different StatusBarNotification postings
      *     (rich MessagingStyle vs. plain compatibility) with two different — correctly
@@ -37,9 +23,10 @@ class NotificationRepository(context: Context) {
      *     key with *different* text is never treated as a duplicate on its own — apps like
      *     Messenger/WhatsApp reuse one key for an entire conversation thread, so key alone
      *     doesn't identify a specific message.
-     * This method then only turns the result into a human-readable explanation.
+     * On a genuine new insert, classification runs immediately (still within the background
+     * coroutine the caller launched) and the row is updated with its result.
      */
-    suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long, receivedAt: Long): CaptureOutcome {
+    suspend fun capture(notificationKey: String, sourceApp: String, sender: String, text: String, timestamp: Long, receivedAt: Long) {
         val result = dao.captureIfNew(
             notificationKey = notificationKey,
             sourceApp = sourceApp,
@@ -51,31 +38,14 @@ class NotificationRepository(context: Context) {
         )
 
         if (result.insertedRowId != -1L) {
-            return CaptureOutcome(wasInserted = true, conflictDetail = null)
+            val classification = NotificationClassifier.classify(sourceApp, sender, text)
+            dao.updateClassification(
+                id = result.insertedRowId,
+                state = classification.state,
+                summary = classification.summary,
+                date = classification.date
+            )
         }
-
-        val matched = result.matchedRow ?: return CaptureOutcome(
-            wasInserted = false,
-            conflictDetail = "insert was ignored but no matching row was found"
-        )
-        val reason = when (result.matchReason) {
-            "content-window" -> "matched existing row id=${matched.id} by content within " +
-                "${CROSS_SOURCE_WINDOW_MS / 1000}s (timestamp differs by ${timestamp - matched.timestamp}ms, " +
-                "likely a different extraction path for the same event)"
-            "key+text" -> "matched existing row id=${matched.id} by notificationKey + identical text"
-            "exact-content-index" -> "matched existing row id=${matched.id} by exact content+timestamp"
-            else -> "matched existing row id=${matched.id}"
-        }
-        return CaptureOutcome(
-            wasInserted = false,
-            conflictDetail = "$reason, captured ${ageDescription(receivedAt - matched.capturedAt)} ago"
-        )
-    }
-
-    private fun ageDescription(ageMs: Long): String = when {
-        ageMs < 60_000 -> "%.1fs".format(ageMs / 1000.0)
-        ageMs < 3_600_000 -> "%.1fm".format(ageMs / 60_000.0)
-        else -> "%.1fh".format(ageMs / 3_600_000.0)
     }
 
     companion object {

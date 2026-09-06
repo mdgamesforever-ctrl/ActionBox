@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import com.futurepath.actionbox.classification.ClassifiedState
 import kotlinx.coroutines.flow.Flow
 
 data class CaptureAttemptResult(
@@ -27,6 +28,15 @@ interface NotificationDao {
 
     @Query("SELECT COUNT(*) FROM captured_notifications")
     fun observeCount(): Flow<Int>
+
+    @Query(
+        """
+        UPDATE captured_notifications
+        SET classifiedState = :state, extractedSummary = :summary, extractedDate = :date, isProcessed = 1
+        WHERE id = :id
+        """
+    )
+    suspend fun updateClassification(id: Long, state: ClassifiedState, summary: String?, date: String?)
 
     @Query(
         """

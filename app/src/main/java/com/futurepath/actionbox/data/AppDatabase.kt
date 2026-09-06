@@ -4,17 +4,17 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
 @Database(
-    entities = [NotificationEntity::class, NotificationDebugEvent::class],
-    version = 6,
+    entities = [NotificationEntity::class],
+    version = 7,
     exportSchema = false
 )
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun notificationDao(): NotificationDao
-
-    abstract fun notificationDebugEventDao(): NotificationDebugEventDao
 
     companion object {
         @Volatile
@@ -28,7 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "actionbox.db"
                 )
                     // Pre-release debug build; no captured data is worth preserving across
-                    // these schema changes (unique indices added for dedup).
+                    // these schema changes.
                     .fallbackToDestructiveMigration()
                     .build().also { instance = it }
             }

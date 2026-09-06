@@ -7,6 +7,6 @@
     <string name="onboarding_status_granted">Notification access is granted. ActionBox is capturing notifications.</string>
     <string name="onboarding_status_not_granted">Notification access has not been granted yet.</string>
 
-    <string name="feed_title">Capture Debug Log</string>
-    <string name="feed_empty">No notifications received yet. Trigger a notification from another app (WhatsApp, SMS, Gmail, etc.) to see it appear here. Tap any entry to see its raw extraction details.</string>
+    <string name="feed_title">Captured Notifications</string>
+    <string name="feed_empty">No notifications captured yet. Trigger a notification from another app (WhatsApp, SMS, Gmail, etc.) to see it appear here.</string>
 </resources>

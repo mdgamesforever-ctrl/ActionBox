@@ -3,6 +3,7 @@ package com.futurepath.actionbox.data
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.futurepath.actionbox.classification.ClassifiedState
 
 @Entity(
     tableName = "captured_notifications",
@@ -33,5 +34,9 @@ data class NotificationEntity(
     // with something captured a second ago (a genuine repeat callback) or hours/days ago
     // (stale data from an earlier test run), instead of just "it was a duplicate."
     val capturedAt: Long,
-    val isProcessed: Boolean = false
+    val isProcessed: Boolean = false,
+    // Set by NotificationClassifier shortly after capture; null until then.
+    val classifiedState: ClassifiedState? = null,
+    val extractedSummary: String? = null,
+    val extractedDate: String? = null
 )
