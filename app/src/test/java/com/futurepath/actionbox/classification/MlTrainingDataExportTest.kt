@@ -31,26 +31,34 @@ class MlTrainingDataExportTest {
     }
 
     /**
-     * Combines both corpora for training: [SyntheticNotificationCorpus] (template+substitution
-     * style, 122 templates) and [DiverseNotificationCorpus] (246 independently-written
-     * sentences — see that file's doc for why it exists). Diverse's templateIndex values are
-     * offset past Synthetic's so the two corpora's template groups never collide when the
-     * Python training script groups rows by template for held-out evaluation. The `source`
-     * column lets that script balance each source's total training weight (see its doc) —
-     * without it, the templated corpus's much higher row count per structure would still
-     * dominate the loss even with 246 diverse structures present, undermining the point of
-     * adding them.
+     * Combines three corpora for training: [SyntheticNotificationCorpus] (template+substitution
+     * style, 122 templates), [DiverseNotificationCorpus] (independently-written sentences — see
+     * that file's doc for why it exists), and [RealDatasetCorpus] (real public-dataset text —
+     * SMS Spam Collection, SpamAssassin, Enron, Schema-Guided Dialogue — mapped/relabeled to
+     * ActionBox's categories; see that file's doc for the full source breakdown). Each corpus's
+     * templateIndex values are offset past the previous one's so template groups never collide
+     * when the Python training script groups rows by template for held-out evaluation. The
+     * `source` column lets that script balance each source's total training weight (see its
+     * doc) — without it, the templated corpus's much higher row count per structure would
+     * dominate the loss even with the other two corpora present, undermining the point of
+     * including them. RealDatasetCorpus rows all carry variantIndex 0 (each is a single real
+     * example, not a substitution-variant family), so it contributes one "template" per row
+     * for held-out purposes — appropriate since there's no sibling-variant leakage risk within
+     * real text the way there is for templated/substituted text.
      */
     @Test
     fun exportNormalizedCorpus() {
-        val templateIndexOffset = SyntheticNotificationCorpus.templates.size
+        val syntheticOffset = SyntheticNotificationCorpus.templates.size
         val synthetic = SyntheticNotificationCorpus.buildCorpus()
         val diverse = DiverseNotificationCorpus.buildCorpus()
-            .map { it.copy(templateIndex = it.templateIndex + templateIndexOffset) }
+            .map { it.copy(templateIndex = it.templateIndex + syntheticOffset) }
+        val diverseOffset = syntheticOffset + DiverseNotificationCorpus.templates.size
+        val real = RealDatasetCorpus.buildCorpus()
+            .mapIndexed { i, case -> case.copy(templateIndex = diverseOffset + i) }
 
         val sb = StringBuilder()
         sb.appendLine("templateIndex\tlabel\tsourceApp\tsender\tsource\tnormalizedText")
-        for ((cases, source) in listOf(synthetic to "synthetic", diverse to "diverse")) {
+        for ((cases, source) in listOf(synthetic to "synthetic", diverse to "diverse", real to "real")) {
             for (case in cases) {
                 val normalized = TextNormalizer.normalize(case.text)
                 sb.appendLine("${case.templateIndex}\t${case.expected}\t${case.sourceApp}\t${case.sender}\t$source\t$normalized")
@@ -60,8 +68,8 @@ class MlTrainingDataExportTest {
             parentFile?.mkdirs()
             writeText(sb.toString())
         }
-        println("Exported ${synthetic.size} synthetic + ${diverse.size} diverse = " +
-            "${synthetic.size + diverse.size} examples to build/ml-training-data.tsv")
+        println("Exported ${synthetic.size} synthetic + ${diverse.size} diverse + ${real.size} real = " +
+            "${synthetic.size + diverse.size + real.size} examples to build/ml-training-data.tsv")
     }
 
     /**

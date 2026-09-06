@@ -10,3 +10,9 @@
 .cxx
 .kotlin/
 local.properties
+
+# Raw/intermediate downloaded dataset files (spam tarballs, fetched dialogue JSON, per-stage
+# JSONL) from tools/dataset_integration/'s fetch/triage pipeline -- reproducible by re-running
+# that pipeline, and redistributing raw third-party dataset files in this repo isn't necessary
+# now that the cleaned/relabeled result is committed as RealDatasetCorpus.kt.
+/tools/dataset_cache/

@@ -604,11 +604,24 @@ object NotificationClassifier {
         // out") was being read as a literal command rather than recognized as promotional
         // framing (see the "check it out" suppression on ACTION_VERB_SUPPRESSED_BY).
         "today only", "check it out", "new update available", "don't miss out", "act now",
-        "shop now"
+        "shop now",
+        // Classic SMS/email spam-register phrasing — found via real public-dataset
+        // integration (SMS Spam Collection + SpamAssassin) to be almost entirely uncaught by
+        // the app-notification-style promo phrasing above (98% miss rate on real spam text:
+        // "WINNER!! ... you have been selected", "URGENT! You have won...", "Free entry in 2
+        // a wkly comp..."). Deliberately kept to markers distinctive enough to avoid colliding
+        // with genuine ACTION/DEADLINE urgency ("urgent" and "txt" alone were considered and
+        // rejected as too generic/collision-prone; see the session report).
+        "you've won", "you have won", "u have won", "claim your prize", "claim now",
+        "free entry", "reply stop"
     ) + listOf(
         // "50% off", "70% off" — percent-off framing, a classic promo pattern not otherwise
         // caught by any literal phrase above.
-        Regex("\\d+%\\s*off")
+        Regex("\\d+%\\s*off"),
+        // "WINNER!!", "URGENT!" — spam's characteristic multi-exclamation-mark shouting on a
+        // single all-caps or near-all-caps attention word, distinct from an ordinary excited
+        // sentence because it's the word ALONE (not part of a longer imperative).
+        Regex("\\b(?:winner|urgent|congratulations)!!", RegexOption.IGNORE_CASE)
     )
 
     private val FYI_PATTERNS = phrases(

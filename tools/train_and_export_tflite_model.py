@@ -444,15 +444,19 @@ def main():
                          f"sentence structures ({source_counts.get('synthetic', 0)} rows from "
                          f"SyntheticNotificationCorpus's template+substitution style, "
                          f"{source_counts.get('diverse', 0)} rows from DiverseNotificationCorpus's "
-                         f"independently-written sentences)")
-    report_lines.append("Real corrected examples included: 0 (none available in this sandbox -- "
-                         "no connected device/user data)")
+                         f"independently-written sentences, {source_counts.get('real', 0)} rows "
+                         f"from RealDatasetCorpus's public-dataset text -- SMS Spam Collection, "
+                         f"SpamAssassin, Enron, Schema-Guided Dialogue, see that file's doc)")
+    report_lines.append("Real ON-DEVICE CORRECTED examples included: 0 (none available in this "
+                         "sandbox -- no connected device/user data; not to be confused with "
+                         "RealDatasetCorpus above, which is real public-dataset TEXT, not real "
+                         "corrections from actual ActionBox usage)")
     report_lines.append(f"Feature space: {VECTOR_SIZE}-dim hashed bag-of-words (HashedTextVectorizer)")
     report_lines.append("Model: multinomial logistic regression (= FULLY_CONNECTED + SOFTMAX)")
-    report_lines.append(f"Sample weighting: each `source` value (synthetic/diverse) contributes "
+    report_lines.append(f"Sample weighting: each `source` value (synthetic/diverse/real) contributes "
                          f"equal TOTAL weight during training (see source_balanced_weights), so "
                          f"the templated corpus's much higher row count per structure can't "
-                         f"drown out the diverse examples")
+                         f"drown out the diverse or real examples")
     report_lines.append(f"Hyperparameters: C={best_C}, class_weight={best_class_weight}, chosen "
                          f"by 5-fold CV grouped by template, source-weighted (mean CV accuracy "
                          f"{best_cv_score * 100:.2f}%)")
