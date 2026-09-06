@@ -144,6 +144,45 @@ object TextNormalizer {
         "addy" to "address",
         "bday" to "birthday",
         "prob" to "probably",
-        "prolly" to "probably"
+        "prolly" to "probably",
+        // Dropped-apostrophe contractions ("ill", "im", "dont"...) — extremely common in
+        // casual texting and previously invisible to any pattern expecting the apostrophe
+        // form ("i'll", "don't"). Deliberately excludes ones that collide with a common
+        // standalone word ("well" as we'll/as in feeling fine, "hell" as he'll/the place) —
+        // those ambiguous cases are left unexpanded rather than risk corrupting them.
+        "ill" to "i will",
+        "im" to "i am",
+        "ive" to "i have",
+        "youre" to "you are",
+        "youve" to "you have",
+        "youll" to "you will",
+        "theyre" to "they are",
+        "theyve" to "they have",
+        "theyll" to "they will",
+        "hes" to "he is",
+        "shes" to "she is",
+        "weve" to "we have",
+        "dont" to "do not",
+        "doesnt" to "does not",
+        "didnt" to "did not",
+        "cant" to "cannot",
+        "wont" to "will not",
+        "wouldnt" to "would not",
+        "couldnt" to "could not",
+        "shouldnt" to "should not",
+        "isnt" to "is not",
+        "arent" to "are not",
+        "wasnt" to "was not",
+        "werent" to "were not",
+        "hasnt" to "has not",
+        "havent" to "have not",
+        "hadnt" to "had not",
+        "aint" to "is not",
+        "whats" to "what is",
+        "thats" to "that is",
+        "theres" to "there is",
+        "heres" to "here is",
+        "whos" to "who is",
+        "lets" to "let us"
     )
 }

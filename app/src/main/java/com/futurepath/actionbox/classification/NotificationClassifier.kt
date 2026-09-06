@@ -48,11 +48,15 @@ object NotificationClassifier {
             else -> null
         }
 
-        // Below the LOW threshold, don't trust the winning category at all — fall back to
-        // FYI as the safe default. The confidence score itself is kept as computed (still
-        // <55) so the UI can mark this row as needing review, and the summary/date already
-        // extracted from the (uncertain) winner are still surfaced as a hint.
-        val finalState = if (confidence < CONFIDENCE_LOW_THRESHOLD) ClassifiedState.FYI else winner
+        // Only fall back to FYI when NOTHING scored at all — a genuine absence of signal.
+        // A moderate/low confidence score from a close call between two real candidates
+        // (e.g. WAITING vs. ACTION both firing) still keeps the higher-scoring pick: a near
+        // tie between two plausible categories is meaningfully different from no evidence at
+        // all, and silently overwriting a defensible answer with FYI just because two
+        // categories were close discarded correct classifications in testing. The confidence
+        // score is still reported as computed either way, so the UI can flag a low-confidence
+        // pick as needing review without erasing what the classifier actually found.
+        val finalState = if (topScore <= 0) ClassifiedState.FYI else winner
         return ClassificationResult(finalState, summary, date, confidence)
     }
 
@@ -88,7 +92,8 @@ object NotificationClassifier {
     }
 
     private fun scoreDeadline(lowerText: String): Int {
-        val dueMatches = DUE_PATTERNS.count { it.containsMatchIn(lowerText) }
+        val dueMatches = DUE_PATTERNS.count { it.containsMatchIn(lowerText) } +
+            (if (BY_DEADLINE_PATTERN.containsMatchIn(lowerText)) 1 else 0)
         val dateMatches = DEADLINE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
         var total = dueMatches * DUE_WEIGHT + dateMatches * DATE_WEIGHT
         if (dueMatches > 0 && dateMatches > 0) total += COMBO_BONUS
@@ -99,6 +104,14 @@ object NotificationClassifier {
         var total = 0
         var verbHit = false
         for (verb in ACTION_VERBS) {
+            // "check"/"confirm"/"call" also double as the head word of a more specific
+            // REPLY/WAITING phrase ("i'll check", "can you confirm", "call me"). When that
+            // phrase is present, the word is already claimed by the more specific category
+            // and shouldn't also inflate ACTION's score for the same underlying mention.
+            val suppressedBy = ACTION_VERB_SUPPRESSED_BY[verb.word]
+            if (suppressedBy != null && suppressedBy.containsMatchIn(lowerText)) {
+                continue
+            }
             if (verb.bare.containsMatchIn(lowerText)) {
                 verbHit = true
                 total += ACTION_VERB_WEIGHT
@@ -130,6 +143,7 @@ object NotificationClassifier {
                 REQUEST_MARKERS.any { it.containsMatchIn(lower) } ||
                 WAITING_PATTERNS.any { it.containsMatchIn(lower) } ||
                 DUE_PATTERNS.any { it.containsMatchIn(lower) } ||
+                BY_DEADLINE_PATTERN.containsMatchIn(lower) ||
                 DEADLINE_DATE_PATTERNS.any { it.containsMatchIn(lower) }
         } ?: clauses.firstOrNull()
 
@@ -151,7 +165,6 @@ object NotificationClassifier {
     private const val STRENGTH_CAP = 8f
     private const val MARGIN_WEIGHT = 0.6f
     private const val STRENGTH_WEIGHT = 0.4f
-    private const val CONFIDENCE_LOW_THRESHOLD = 55
 
     private fun phrases(vararg raw: String): List<Regex> = raw.map { Regex("\\b${Regex.escape(it)}\\b") }
 
@@ -181,8 +194,18 @@ object NotificationClassifier {
     )
 
     private val DUE_PATTERNS = phrases(
-        "due", "expires", "expiring", "deadline", "before", "by",
+        "due", "expires", "expiring", "deadline", "before",
         "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
+    )
+
+    // "by" alone is too generic (fires on "by tomorrow morning", "by the way", etc.) — only
+    // counts as a deadline signal when it actually precedes a day/date/time.
+    private val BY_DEADLINE_PATTERN = Regex(
+        "\\bby\\s+(?:the\\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|" +
+            "today|tomorrow|tonight|end of month|end of week|next week|" +
+            "january|february|march|april|may|june|july|august|september|october|november|december|" +
+            "\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}/\\d{1,2})",
+        RegexOption.IGNORE_CASE
     )
 
     // Day names and relative time phrases count as deadline signals on their own, per spec,
@@ -192,7 +215,7 @@ object NotificationClassifier {
         "end of month", "end of week", "next week"
     )
 
-    private data class ActionVerb(val bare: Regex, val directed: Regex)
+    private data class ActionVerb(val word: String, val bare: Regex, val directed: Regex)
 
     private val ACTION_VERBS = listOf(
         "send", "bring", "upload", "finish", "buy", "pay", "call", "pick up", "check",
@@ -200,12 +223,21 @@ object NotificationClassifier {
     ).map { verb ->
         val escaped = Regex.escape(verb)
         ActionVerb(
+            word = verb,
             bare = Regex("\\b$escaped\\b"),
             // e.g. "send this", "call me", "pick up that" — verb directed at me/this/that
             // within a couple of words.
             directed = Regex("\\b$escaped\\b(?:\\s+\\w+){0,2}\\s+(me|this|that)\\b")
         )
     }
+
+    // See the suppression check in scoreAction(): these verbs double as the head word of a
+    // more specific REPLY/WAITING phrase, so that phrase already "owns" the word.
+    private val ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = mapOf(
+        "call" to Regex("\\bcall me\\b"),
+        "check" to Regex("\\bi'll check\\b"),
+        "confirm" to Regex("\\bcan you confirm\\b")
+    )
 
     private val REQUEST_MARKERS = phrases("can you", "could you", "would you", "need you to")
 
@@ -217,7 +249,8 @@ object NotificationClassifier {
 
     private val REPLY_PATTERNS = phrases(
         "let me know", "lmk", "tell me", "get back to me", "call me", "text me", "hmu",
-        "what do you think", "can you confirm", "keep me posted", "are you free", "when are you free"
+        "hit me up", "what do you think", "can you confirm", "keep me posted", "are you free",
+        "when are you free"
     )
 
     // Broader than DEADLINE_DATE_PATTERNS — used only to populate extractedDate, not scoring.
