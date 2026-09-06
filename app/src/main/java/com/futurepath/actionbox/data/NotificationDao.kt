@@ -44,4 +44,23 @@ interface NotificationDao {
         """
     )
     suspend fun findByContent(sourceApp: String, sender: String, text: String, timestamp: Long): NotificationEntity?
+
+    /**
+     * Same real message can reach onNotificationPosted via two genuinely different
+     * StatusBarNotification postings (e.g. a rich MessagingStyle notification and a
+     * separate plain-text compatibility notification for the same event) — different
+     * notificationKey, and their timestamps come from different clocks (the message's own
+     * timestamp vs. this device's notification post time), so they rarely match exactly.
+     * Matching on identical text within a short window catches this without the
+     * exact-equality unique index ever seeing it.
+     */
+    @Query(
+        """
+        SELECT * FROM captured_notifications
+        WHERE sourceApp = :sourceApp AND sender = :sender AND text = :text
+          AND timestamp BETWEEN :minTimestamp AND :maxTimestamp
+        LIMIT 1
+        """
+    )
+    suspend fun findRecentByContent(sourceApp: String, sender: String, text: String, minTimestamp: Long, maxTimestamp: Long): NotificationEntity?
 }
