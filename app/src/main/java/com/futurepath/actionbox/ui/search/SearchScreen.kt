@@ -19,7 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.search.NotificationSearch
@@ -48,15 +50,15 @@ fun SearchScreen(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            label = { Text("Search by sender or message") },
+            label = { Text(stringResource(R.string.search_field_label)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         when {
-            query.isBlank() -> EmptyState("Search across every notification you have stored, regardless of category or app.")
-            results.isEmpty() -> EmptyState("No matches for \"$query\".")
+            query.isBlank() -> EmptyState(stringResource(R.string.search_empty_prompt))
+            results.isEmpty() -> EmptyState(stringResource(R.string.search_no_matches, query))
             else -> LazyColumn {
                 items(results, key = { it.id }) { notification ->
                     NotificationCard(notification, onCorrect, isPro)

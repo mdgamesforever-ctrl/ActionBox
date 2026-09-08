@@ -14,9 +14,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.reminders.WeeklyInsights
+import com.futurepath.actionbox.ui.components.labelRes
 
 /**
  * Pro feature — the breakdown behind the weekly insights notification (see
@@ -34,7 +38,7 @@ fun WeeklyInsightsScreen(insights: WeeklyInsights) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Not enough data yet — check back after your first week using ActionBox.",
+                text = stringResource(R.string.insights_not_enough_data),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -42,10 +46,10 @@ fun WeeklyInsightsScreen(insights: WeeklyInsights) {
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "This week", style = MaterialTheme.typography.titleLarge)
+        Text(text = stringResource(R.string.insights_this_week), style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "${insights.totalCaptured} notifications captured",
+            text = pluralStringResource(R.plurals.insights_notifications_captured, insights.totalCaptured, insights.totalCaptured),
             style = MaterialTheme.typography.bodyLarge
         )
 
@@ -53,7 +57,7 @@ fun WeeklyInsightsScreen(insights: WeeklyInsights) {
         HorizontalDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "By category", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(R.string.insights_by_category), style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         CATEGORY_ORDER.forEach { state ->
             val count = insights.countByCategory[state] ?: 0
@@ -62,7 +66,7 @@ fun WeeklyInsightsScreen(insights: WeeklyInsights) {
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
             ) {
-                Text(text = state.name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(text = stringResource(state.labelRes()), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 Text(text = count.toString(), style = MaterialTheme.typography.bodyMedium)
             }
         }
@@ -71,13 +75,17 @@ fun WeeklyInsightsScreen(insights: WeeklyInsights) {
         HorizontalDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(text = "Still waiting", style = MaterialTheme.typography.titleMedium)
+        Text(text = stringResource(R.string.insights_still_waiting), style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = if (insights.staleWaitingCount == 0) {
-                "Nothing unresolved for more than 5 days — nice."
+                stringResource(R.string.insights_nothing_stale)
             } else {
-                "${insights.staleWaitingCount} item(s) still unresolved after 5+ days."
+                pluralStringResource(
+                    R.plurals.insights_stale_waiting_count,
+                    insights.staleWaitingCount,
+                    insights.staleWaitingCount
+                )
             },
             style = MaterialTheme.typography.bodyMedium
         )

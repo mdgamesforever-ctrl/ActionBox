@@ -31,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.futurepath.actionbox.R
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -128,12 +130,12 @@ fun MainScreen(
                 actions = {
                     if (currentTab != null) {
                         IconButton(onClick = { navController.navigate(SEARCH_ROUTE) }) {
-                            Icon(Icons.Filled.Search, contentDescription = "Search")
+                            Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.action_search))
                         }
                     }
                     if (currentRoute != SETTINGS_ROUTE) {
                         IconButton(onClick = { navController.navigate(SETTINGS_ROUTE) }) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_settings))
                         }
                     }
                 }
@@ -172,10 +174,10 @@ fun MainScreen(
                                 },
                                 icon = {
                                     BadgedBox(badge = { if (count > 0) Badge { Text(count.toString()) } }) {
-                                        Icon(iconFor(tab), contentDescription = tab.label)
+                                        Icon(iconFor(tab), contentDescription = stringResource(tab.labelRes))
                                     }
                                 },
-                                label = { Text(tab.label) }
+                                label = { Text(stringResource(tab.labelRes)) }
                             )
                         }
                     }
@@ -264,15 +266,15 @@ fun MainScreen(
 @Composable
 private fun TopBarTitle(currentRoute: String?, currentTab: InboxTab?, onOpenDebug: () -> Unit) {
     val title = when {
-        currentTab != null -> currentTab.label
-        currentRoute == SETTINGS_ROUTE -> "Settings"
-        currentRoute == PAYWALL_ROUTE -> "Upgrade to Pro"
-        currentRoute == DEBUG_ROUTE -> "Debug Feed"
-        currentRoute == SEARCH_ROUTE -> "Search"
-        currentRoute == CRASH_LOG_ROUTE -> "Crash Log"
-        currentRoute == VIP_SENDERS_ROUTE -> "VIP Senders"
-        currentRoute == WEEKLY_INSIGHTS_ROUTE -> "Weekly Insights"
-        else -> "ActionBox"
+        currentTab != null -> stringResource(currentTab.labelRes)
+        currentRoute == SETTINGS_ROUTE -> stringResource(R.string.tab_settings)
+        currentRoute == PAYWALL_ROUTE -> stringResource(R.string.title_upgrade_to_pro)
+        currentRoute == DEBUG_ROUTE -> stringResource(R.string.title_debug_feed)
+        currentRoute == SEARCH_ROUTE -> stringResource(R.string.action_search)
+        currentRoute == CRASH_LOG_ROUTE -> stringResource(R.string.title_crash_log)
+        currentRoute == VIP_SENDERS_ROUTE -> stringResource(R.string.title_vip_senders)
+        currentRoute == WEEKLY_INSIGHTS_ROUTE -> stringResource(R.string.title_weekly_insights)
+        else -> stringResource(R.string.app_name)
     }
     Text(
         text = title,

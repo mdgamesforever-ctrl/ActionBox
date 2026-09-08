@@ -1,0 +1,171 @@
+<resources>
+    <string name="app_name">ActionBox</string>
+
+    <string name="onboarding_title">Izinkan ActionBox membaca notifikasimu</string>
+    <string name="onboarding_body">ActionBox mengatur notifikasi masuk (seperti pesan WhatsApp, SMS, dan email) menjadi item yang dapat ditindaklanjuti. Untuk melakukannya, aplikasi ini memerlukan izin untuk membaca konten notifikasi.\n\nKonten notifikasimu tetap berada di perangkat ini dan tidak pernah diunggah ke mana pun — klasifikasi sepenuhnya berjalan di perangkat. (Paket gratis menampilkan iklan, dan pembelian Pro dilakukan melalui Google Play; keduanya tidak pernah melihat konten notifikasimu.) Kamu dapat mencabut akses notifikasi kapan saja dari pengaturan sistem.</string>
+    <string name="onboarding_grant_button">Buka Pengaturan Akses Notifikasi</string>
+    <string name="onboarding_status_granted">Akses notifikasi telah diberikan. ActionBox sedang menangkap notifikasi.</string>
+    <string name="onboarding_status_not_granted">Akses notifikasi belum diberikan.</string>
+
+    <string name="feed_title">Notifikasi Tertangkap</string>
+    <string name="feed_empty">Belum ada notifikasi yang ditangkap. Picu notifikasi dari aplikasi lain (WhatsApp, SMS, Gmail, dll.) untuk melihatnya muncul di sini.</string>
+
+    <string name="widget_label">ActionBox</string>
+    <string name="widget_description">Hitungan langsung untuk hal yang perlu perhatianmu — Tindakan, Menunggu, Tenggat, dan Balas. Khusus Pro.</string>
+    <string name="widget_upgrade_placeholder">Upgrade ke Pro untuk menambahkan widget ini</string>
+    <string name="widget_load_error">Gagal memuat — ketuk untuk membuka ActionBox</string>
+
+    <!-- Category / tab names -->
+    <string name="tab_action">Tindakan</string>
+    <string name="tab_waiting">Menunggu</string>
+    <string name="tab_deadline">Tenggat</string>
+    <string name="tab_reply">Balas</string>
+    <string name="tab_other">Lainnya</string>
+    <string name="tab_settings">Pengaturan</string>
+
+    <string name="category_action">TINDAKAN</string>
+    <string name="category_reply">BALAS</string>
+    <string name="category_waiting">MENUNGGU</string>
+    <string name="category_deadline">TENGGAT</string>
+    <string name="category_fyi">INFO</string>
+    <string name="category_noise">GANGGUAN</string>
+
+    <!-- Screen titles -->
+    <string name="title_upgrade_to_pro">Upgrade ke Pro</string>
+    <string name="title_debug_feed">Feed Debug</string>
+    <string name="title_crash_log">Log Crash</string>
+    <string name="title_vip_senders">Pengirim VIP</string>
+    <string name="title_weekly_insights">Ringkasan Mingguan</string>
+
+    <!-- Common actions -->
+    <string name="action_search">Cari</string>
+    <string name="action_continue">Lanjutkan</string>
+    <string name="action_undo">Urungkan</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_add">Tambah</string>
+    <string name="action_remove">Hapus</string>
+    <string name="action_copy">Salin</string>
+    <string name="action_share">Bagikan</string>
+    <string name="action_manage">Kelola</string>
+    <string name="action_upgrade">Upgrade</string>
+    <string name="action_try_again">Coba lagi</string>
+    <string name="action_subscribe">Berlangganan</string>
+    <string name="action_continue_with_free">Lanjutkan dengan Gratis</string>
+    <string name="action_mark_handled">Tandai sudah ditangani</string>
+    <string name="action_snooze">Tunda</string>
+    <string name="action_show_more">Tampilkan lebih banyak</string>
+    <string name="action_show_less">Tampilkan lebih sedikit</string>
+    <string name="state_on">Aktif</string>
+    <string name="state_off">Nonaktif</string>
+
+    <!-- Notification card -->
+    <string name="label_summary_prefix">Ringkasan: %1$s</string>
+    <string name="label_needs_review">⚠ Perlu ditinjau — keyakinan rendah (%1$d%%)</string>
+    <string name="label_not_sure">❓ Tidak yakin? — ketuk untuk memverifikasi (%1$d%%)</string>
+    <string name="label_corrected">(dikoreksi)</string>
+    <string name="toast_copied">\"%1$s\" disalin</string>
+
+    <!-- Search -->
+    <string name="search_field_label">Cari berdasarkan pengirim atau pesan</string>
+    <string name="search_empty_prompt">Cari di semua notifikasi yang tersimpan, tanpa memandang kategori atau aplikasi.</string>
+    <string name="search_no_matches">Tidak ada hasil untuk \"%1$s\".</string>
+
+    <!-- Category inbox -->
+    <string name="snackbar_marked_handled">Ditandai sudah ditangani</string>
+    <string name="snackbar_snoozed_until">Ditunda hingga %1$s</string>
+    <string name="dialog_snooze_until_title">Tunda hingga…</string>
+    <string name="snooze_one_hour">1 jam</string>
+    <string name="snooze_tomorrow">Besok</string>
+    <string name="snooze_next_week">Minggu depan</string>
+    <string name="empty_inbox_action">Tidak ada yang perlu ditindaklanjuti saat ini.</string>
+    <string name="empty_inbox_waiting">Tidak ada yang kamu tunggu saat ini.</string>
+    <string name="empty_inbox_deadline">Tidak ada tenggat mendatang.</string>
+    <string name="empty_inbox_reply">Tidak ada pesan yang menunggu balasan.</string>
+    <string name="empty_inbox_other">Tidak ada apa-apa di sini — pemberitahuan info dan gangguan akan muncul di tab ini.</string>
+
+    <!-- Crash log -->
+    <string name="crash_log_share_chooser_title">Bagikan log crash</string>
+    <string name="crash_log_none_recorded">Belum ada crash yang tercatat sejak aplikasi ini dipasang (atau sejak datanya terakhir dihapus).</string>
+    <string name="crash_log_downloads_note">Salinan setiap crash yang tercatat juga disimpan langsung di folder Downloads ponselmu (sebagai ActionBox_crash_&lt;timestamp&gt;.txt) — buka dengan pengelola file apa pun jika kamu tidak ingin menggunakan Salin/Bagikan di bawah.</string>
+
+    <!-- VIP senders -->
+    <string name="vip_add_action">Tambah VIP</string>
+    <string name="vip_screen_subtitle">Notifikasi dari pengirim atau aplikasi VIP selalu masuk ke Tindakan, apa pun yang biasanya dipilih oleh pengklasifikasi.</string>
+    <string name="vip_empty_state">Belum ada VIP — ketuk + untuk menambahkan pengirim atau aplikasi.</string>
+    <string name="vip_entire_app">Seluruh aplikasi</string>
+    <string name="vip_add_dialog_title">Tambah VIP</string>
+    <string name="vip_add_dialog_no_notifications">Belum ada notifikasi yang ditangkap — VIP dipilih dari aplikasi dan pengirim yang notifikasinya sudah pernah kamu terima.</string>
+    <string name="vip_add_dialog_app_label">Aplikasi</string>
+    <string name="vip_add_dialog_sender_label">Pengirim (opsional — kosong = seluruh aplikasi)</string>
+
+    <!-- Paywall -->
+    <string name="paywall_subtitle">Buka riwayat tak terbatas, kotak masuk bebas iklan, dan klasifikasi yang lebih cerdas.</string>
+    <string name="paywall_billing_unavailable">Penagihan Google Play tidak tersedia saat ini. Periksa koneksimu dan coba lagi.</string>
+    <string name="paywall_unlimited">Tak terbatas</string>
+    <string name="paywall_feature_history">Riwayat notifikasi</string>
+    <string name="paywall_feature_ad_free">Pengalaman bebas iklan</string>
+    <string name="paywall_feature_smart_corrections">Koreksi cerdas</string>
+    <string name="paywall_feature_widget">Widget layar utama</string>
+    <string name="paywall_feature_vip">Eskalasi VIP</string>
+    <string name="paywall_feature_weekly_insights">Laporan ringkasan mingguan</string>
+    <string name="paywall_feature_smart_reply">Saran balasan cerdas</string>
+    <string name="paywall_feature_core_inbox">Kotak masuk inti &amp; notifikasi</string>
+    <string name="paywall_column_feature">Fitur</string>
+    <string name="paywall_column_free">Gratis</string>
+    <string name="paywall_column_pro">Pro</string>
+    <string name="paywall_included">Termasuk</string>
+    <string name="paywall_not_included">Tidak termasuk</string>
+    <string name="paywall_price_per_period">%1$s / %2$s</string>
+    <string name="paywall_period_week">minggu</string>
+    <string name="paywall_period_month">bulan</string>
+    <string name="paywall_period_3_months">3 bulan</string>
+    <string name="paywall_period_6_months">6 bulan</string>
+    <string name="paywall_period_year">tahun</string>
+
+    <!-- Settings -->
+    <string name="settings_section_plan">Paket</string>
+    <string name="settings_row_plan_title">Paket</string>
+    <string name="settings_plan_subtitle_pro">Pro — riwayat tak terbatas, tanpa iklan</string>
+    <string name="settings_plan_subtitle_free">Gratis — riwayat %1$d hari, iklan ditampilkan</string>
+    <string name="settings_section_smart_corrections">Koreksi cerdas</string>
+    <string name="settings_row_learn_corrections_title">Pelajari dari koreksiku</string>
+    <string name="settings_row_learn_corrections_subtitle">Mengklasifikasikan pesan serupa sesuai cara kamu mengoreksinya</string>
+    <string name="settings_section_vip_senders">Pengirim VIP</string>
+    <string name="settings_row_vip_senders_title">Pengirim VIP</string>
+    <string name="settings_row_vip_senders_subtitle">Selalu arahkan pengirim/aplikasi yang ditandai ke Tindakan</string>
+    <string name="settings_section_weekly_insights">Ringkasan mingguan</string>
+    <string name="settings_row_weekly_insights_title">Ringkasan mingguan</string>
+    <string name="settings_row_weekly_insights_subtitle">Volume, rincian kategori, dan item MENUNGGU yang basi</string>
+    <string name="settings_section_reminders">Pengingat</string>
+    <string name="settings_row_digest_title">Ringkasan harian &amp; pengingat menunggu</string>
+    <string name="settings_row_digest_time_title">Waktu ringkasan</string>
+    <string name="settings_section_appearance">Tampilan</string>
+    <string name="settings_row_theme_title">Tema</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Terang</string>
+    <string name="theme_dark">Gelap</string>
+    <string name="settings_row_language_title">Bahasa</string>
+    <string name="settings_language_system_default">Default sistem</string>
+    <string name="settings_section_debug_tools">Alat debug</string>
+    <string name="settings_row_simulate_pro_title">Simulasikan Pro</string>
+    <string name="settings_row_simulate_pro_subtitle">Bukan pembelian sungguhan — hanya untuk pengujian</string>
+    <string name="settings_row_crash_log_title">Lihat log crash terakhir</string>
+    <string name="settings_pro_chip">PRO</string>
+
+    <!-- Weekly insights -->
+    <string name="insights_not_enough_data">Data belum cukup — periksa lagi setelah minggu pertamamu menggunakan ActionBox.</string>
+    <string name="insights_this_week">Minggu ini</string>
+    <string name="insights_by_category">Berdasarkan kategori</string>
+    <string name="insights_still_waiting">Masih menunggu</string>
+    <string name="insights_nothing_stale">Tidak ada yang belum terselesaikan lebih dari 5 hari — bagus.</string>
+
+    <plurals name="insights_notifications_captured">
+        <item quantity="other">%1$d notifikasi tertangkap</item>
+    </plurals>
+    <plurals name="insights_stale_waiting_count">
+        <item quantity="other">%1$d item masih belum terselesaikan setelah 5+ hari.</item>
+    </plurals>
+    <plurals name="paywall_retention_days">
+        <item quantity="other">%1$d hari</item>
+    </plurals>
+</resources>

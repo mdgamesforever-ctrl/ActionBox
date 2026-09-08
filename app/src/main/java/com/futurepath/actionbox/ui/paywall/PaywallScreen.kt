@@ -31,10 +31,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.android.billingclient.api.ProductDetails
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.data.NotificationRepository
 
 /**
@@ -77,10 +79,10 @@ fun PaywallScreen(
             modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "Upgrade to Pro", style = MaterialTheme.typography.headlineMedium)
+        Text(text = stringResource(R.string.title_upgrade_to_pro), style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Unlock unlimited history, an ad-free inbox, and smarter classification.",
+            text = stringResource(R.string.paywall_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -94,13 +96,13 @@ fun PaywallScreen(
         when {
             billingUnavailable -> {
                 Text(
-                    text = "Google Play Billing isn't available right now. Check your connection and try again.",
+                    text = stringResource(R.string.paywall_billing_unavailable),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                TextButton(onClick = onRetryClick) { Text("Try again") }
+                TextButton(onClick = onRetryClick) { Text(stringResource(R.string.action_try_again)) }
             }
             productDetails == null -> CircularProgressIndicator()
             else -> {
@@ -113,14 +115,14 @@ fun PaywallScreen(
                     enabled = activity != null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Subscribe")
+                    Text(stringResource(R.string.action_subscribe))
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
         TextButton(onClick = onContinueFreeClick) {
-            Text("Continue with Free")
+            Text(stringResource(R.string.action_continue_with_free))
         }
     }
 }
@@ -129,7 +131,7 @@ fun PaywallScreen(
  * column's value is a piece of text (e.g. "14 days") rather than a plain included/excluded
  * checkmark. */
 private data class ComparisonRow(
-    val feature: String,
+    val featureRes: Int,
     val freeText: String? = null,
     val freeIncluded: Boolean = false,
     val proText: String? = null
@@ -137,19 +139,21 @@ private data class ComparisonRow(
 
 @Composable
 private fun FeatureComparisonTable() {
+    val unlimited = stringResource(R.string.paywall_unlimited)
+    val freeRetentionDays = pluralStringResourceCompat(NotificationRepository.FREE_RETENTION_DAYS)
     val rows = listOf(
         ComparisonRow(
-            feature = "Notification history",
-            freeText = "${NotificationRepository.FREE_RETENTION_DAYS} days",
-            proText = "Unlimited"
+            featureRes = R.string.paywall_feature_history,
+            freeText = freeRetentionDays,
+            proText = unlimited
         ),
-        ComparisonRow(feature = "Ad-free experience", freeIncluded = false),
-        ComparisonRow(feature = "Smart corrections", freeIncluded = false),
-        ComparisonRow(feature = "Home screen widget", freeIncluded = false),
-        ComparisonRow(feature = "VIP escalation", freeIncluded = false),
-        ComparisonRow(feature = "Weekly insights digest", freeIncluded = false),
-        ComparisonRow(feature = "Smart reply suggestions", freeIncluded = false),
-        ComparisonRow(feature = "Core inbox & notifications", freeIncluded = true)
+        ComparisonRow(featureRes = R.string.paywall_feature_ad_free, freeIncluded = false),
+        ComparisonRow(featureRes = R.string.paywall_feature_smart_corrections, freeIncluded = false),
+        ComparisonRow(featureRes = R.string.paywall_feature_widget, freeIncluded = false),
+        ComparisonRow(featureRes = R.string.paywall_feature_vip, freeIncluded = false),
+        ComparisonRow(featureRes = R.string.paywall_feature_weekly_insights, freeIncluded = false),
+        ComparisonRow(featureRes = R.string.paywall_feature_smart_reply, freeIncluded = false),
+        ComparisonRow(featureRes = R.string.paywall_feature_core_inbox, freeIncluded = true)
     )
 
     Column(
@@ -161,17 +165,17 @@ private fun FeatureComparisonTable() {
         ComparisonTableRow(
             feature = {
                 Text(
-                    text = "Feature",
+                    text = stringResource(R.string.paywall_column_feature),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
             },
             free = {
-                Text(text = "Free", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(text = stringResource(R.string.paywall_column_free), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             },
             pro = {
                 Text(
-                    text = "Pro",
+                    text = stringResource(R.string.paywall_column_pro),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -181,7 +185,7 @@ private fun FeatureComparisonTable() {
         rows.forEach { row ->
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             ComparisonTableRow(
-                feature = { Text(text = row.feature, style = MaterialTheme.typography.bodyMedium) },
+                feature = { Text(text = stringResource(row.featureRes), style = MaterialTheme.typography.bodyMedium) },
                 free = {
                     ComparisonCell(
                         text = row.freeText,
@@ -259,11 +263,16 @@ private fun ComparisonCell(
             color = textColor,
             textAlign = TextAlign.Center
         )
-        included -> Icon(Icons.Filled.Check, contentDescription = "Included", tint = includedTint)
-        else -> Icon(Icons.Filled.Close, contentDescription = "Not included", tint = MaterialTheme.colorScheme.error)
+        included -> Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.paywall_included), tint = includedTint)
+        else -> Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.paywall_not_included), tint = MaterialTheme.colorScheme.error)
     }
 }
 
+@Composable
+private fun pluralStringResourceCompat(days: Int): String =
+    androidx.compose.ui.res.pluralStringResource(R.plurals.paywall_retention_days, days, days)
+
+@Composable
 private fun priceLabel(productDetails: ProductDetails): String? {
     val phase = productDetails.subscriptionOfferDetails
         ?.firstOrNull()
@@ -271,16 +280,17 @@ private fun priceLabel(productDetails: ProductDetails): String? {
         ?.pricingPhaseList
         ?.firstOrNull()
         ?: return null
-    return "${phase.formattedPrice} / ${billingPeriodLabel(phase.billingPeriod)}"
+    return stringResource(R.string.paywall_price_per_period, phase.formattedPrice, billingPeriodLabel(phase.billingPeriod))
 }
 
 // Subscription base plans use ISO 8601 durations for their billing period — the small, fixed
 // set Play Billing actually supports for subscriptions.
+@Composable
 private fun billingPeriodLabel(isoPeriod: String): String = when (isoPeriod) {
-    "P1W" -> "week"
-    "P1M" -> "month"
-    "P3M" -> "3 months"
-    "P6M" -> "6 months"
-    "P1Y" -> "year"
+    "P1W" -> stringResource(R.string.paywall_period_week)
+    "P1M" -> stringResource(R.string.paywall_period_month)
+    "P3M" -> stringResource(R.string.paywall_period_3_months)
+    "P6M" -> stringResource(R.string.paywall_period_6_months)
+    "P1Y" -> stringResource(R.string.paywall_period_year)
     else -> isoPeriod
 }

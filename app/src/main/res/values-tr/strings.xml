@@ -1,0 +1,174 @@
+<resources>
+    <string name="app_name">ActionBox</string>
+
+    <string name="onboarding_title">ActionBox\'a bildirimlerini okuma izni ver</string>
+    <string name="onboarding_body">ActionBox, gelen bildirimleri (WhatsApp mesajları, SMS ve e-postalar gibi) eyleme dönüştürülebilir öğelere dönüştürür. Bunun için bildirim içeriğini okuma izni gerekir.\n\nBildirim içeriğin bu cihazda kalır ve hiçbir yere yüklenmez — sınıflandırma tamamen cihaz üzerinde yapılır. (Ücretsiz plan reklam gösterir ve Pro satın alımları Google Play üzerinden yapılır; ikisi de bildirim içeriğini görmez.) Bildirim erişimini istediğin zaman sistem ayarlarından iptal edebilirsin.</string>
+    <string name="onboarding_grant_button">Bildirim Erişimi Ayarlarını Aç</string>
+    <string name="onboarding_status_granted">Bildirim erişimi verildi. ActionBox bildirimleri yakalıyor.</string>
+    <string name="onboarding_status_not_granted">Bildirim erişimi henüz verilmedi.</string>
+
+    <string name="feed_title">Yakalanan Bildirimler</string>
+    <string name="feed_empty">Henüz bildirim yakalanmadı. Burada görmek için başka bir uygulamadan (WhatsApp, SMS, Gmail vb.) bir bildirim tetikle.</string>
+
+    <string name="widget_label">ActionBox</string>
+    <string name="widget_description">Dikkat gerektiren öğelerin canlı sayısı — Eylem, Beklemede, Son Tarih ve Yanıt. Sadece Pro\'da.</string>
+    <string name="widget_upgrade_placeholder">Bu widget\'ı eklemek için Pro\'ya geç</string>
+    <string name="widget_load_error">Yüklenemedi — ActionBox\'ı açmak için dokun</string>
+
+    <!-- Category / tab names -->
+    <string name="tab_action">Eylem</string>
+    <string name="tab_waiting">Beklemede</string>
+    <string name="tab_deadline">Son Tarih</string>
+    <string name="tab_reply">Yanıt</string>
+    <string name="tab_other">Diğer</string>
+    <string name="tab_settings">Ayarlar</string>
+
+    <string name="category_action">EYLEM</string>
+    <string name="category_reply">YANIT</string>
+    <string name="category_waiting">BEKLEMEDE</string>
+    <string name="category_deadline">SON TARİH</string>
+    <string name="category_fyi">BİLGİ</string>
+    <string name="category_noise">GÜRÜLTÜ</string>
+
+    <!-- Screen titles -->
+    <string name="title_upgrade_to_pro">Pro\'ya Geç</string>
+    <string name="title_debug_feed">Hata Ayıklama Akışı</string>
+    <string name="title_crash_log">Çökme Günlüğü</string>
+    <string name="title_vip_senders">VIP Gönderenler</string>
+    <string name="title_weekly_insights">Haftalık Özet</string>
+
+    <!-- Common actions -->
+    <string name="action_search">Ara</string>
+    <string name="action_continue">Devam Et</string>
+    <string name="action_undo">Geri Al</string>
+    <string name="action_cancel">İptal</string>
+    <string name="action_add">Ekle</string>
+    <string name="action_remove">Kaldır</string>
+    <string name="action_copy">Kopyala</string>
+    <string name="action_share">Paylaş</string>
+    <string name="action_manage">Yönet</string>
+    <string name="action_upgrade">Yükselt</string>
+    <string name="action_try_again">Tekrar Dene</string>
+    <string name="action_subscribe">Abone Ol</string>
+    <string name="action_continue_with_free">Ücretsiz Sürümle Devam Et</string>
+    <string name="action_mark_handled">Halledildi Olarak İşaretle</string>
+    <string name="action_snooze">Ertele</string>
+    <string name="action_show_more">Daha Fazla Göster</string>
+    <string name="action_show_less">Daha Az Göster</string>
+    <string name="state_on">Açık</string>
+    <string name="state_off">Kapalı</string>
+
+    <!-- Notification card -->
+    <string name="label_summary_prefix">Özet: %1$s</string>
+    <string name="label_needs_review">⚠ İnceleme gerekli — düşük güven (%%%1$d)</string>
+    <string name="label_not_sure">❓ Emin değil misin? — doğrulamak için dokun (%%%1$d)</string>
+    <string name="label_corrected">(düzeltildi)</string>
+    <string name="toast_copied">\"%1$s\" kopyalandı</string>
+
+    <!-- Search -->
+    <string name="search_field_label">Gönderene veya mesaja göre ara</string>
+    <string name="search_empty_prompt">Kategori veya uygulama fark etmeksizin sakladığın tüm bildirimlerde ara.</string>
+    <string name="search_no_matches">\"%1$s\" için sonuç bulunamadı.</string>
+
+    <!-- Category inbox -->
+    <string name="snackbar_marked_handled">Halledildi olarak işaretlendi</string>
+    <string name="snackbar_snoozed_until">%1$s tarihine kadar ertelendi</string>
+    <string name="dialog_snooze_until_title">Şu zamana kadar ertele…</string>
+    <string name="snooze_one_hour">1 saat</string>
+    <string name="snooze_tomorrow">Yarın</string>
+    <string name="snooze_next_week">Gelecek hafta</string>
+    <string name="empty_inbox_action">Şu anda eylem gerektiren bir şey yok.</string>
+    <string name="empty_inbox_waiting">Şu anda beklediğin bir şey yok.</string>
+    <string name="empty_inbox_deadline">Yaklaşan son tarih yok.</string>
+    <string name="empty_inbox_reply">Yanıt bekleyen mesaj yok.</string>
+    <string name="empty_inbox_other">Burada bir şey yok — bilgi amaçlı bildirimler ve gürültü bu sekmede görünecek.</string>
+
+    <!-- Crash log -->
+    <string name="crash_log_share_chooser_title">Çökme günlüğünü paylaş</string>
+    <string name="crash_log_none_recorded">Bu uygulama yüklendiğinden beri (veya verileri en son temizlendiğinden beri) hiçbir çökme kaydedilmedi.</string>
+    <string name="crash_log_downloads_note">Kaydedilen her çökmenin bir kopyası ayrıca telefonunun İndirilenler klasörüne kaydedilir (ActionBox_crash_&lt;timestamp&gt;.txt olarak) — aşağıdaki Kopyala/Paylaş\'ı kullanmak istemiyorsan herhangi bir dosya yöneticisiyle açabilirsin.</string>
+
+    <!-- VIP senders -->
+    <string name="vip_add_action">VIP Ekle</string>
+    <string name="vip_screen_subtitle">Bir VIP gönderenden veya uygulamadan gelen bildirimler, sınıflandırıcının normalde ne seçeceğinden bağımsız olarak her zaman Eylem\'e gider.</string>
+    <string name="vip_empty_state">Henüz VIP yok — bir gönderen veya uygulama eklemek için + öğesine dokun.</string>
+    <string name="vip_entire_app">Tüm uygulama</string>
+    <string name="vip_add_dialog_title">VIP Ekle</string>
+    <string name="vip_add_dialog_no_notifications">Henüz bildirim yakalanmadı — VIP\'ler daha önce bildirim aldığın uygulamalardan ve gönderenlerden seçilir.</string>
+    <string name="vip_add_dialog_app_label">Uygulama</string>
+    <string name="vip_add_dialog_sender_label">Gönderen (isteğe bağlı — boş = tüm uygulama)</string>
+
+    <!-- Paywall -->
+    <string name="paywall_subtitle">Sınırsız geçmişin, reklamsız gelen kutusunun ve daha akıllı sınıflandırmanın kilidini aç.</string>
+    <string name="paywall_billing_unavailable">Google Play Faturalandırma şu anda kullanılamıyor. Bağlantını kontrol edip tekrar dene.</string>
+    <string name="paywall_unlimited">Sınırsız</string>
+    <string name="paywall_feature_history">Bildirim geçmişi</string>
+    <string name="paywall_feature_ad_free">Reklamsız deneyim</string>
+    <string name="paywall_feature_smart_corrections">Akıllı düzeltmeler</string>
+    <string name="paywall_feature_widget">Ana ekran widget\'ı</string>
+    <string name="paywall_feature_vip">VIP önceliklendirme</string>
+    <string name="paywall_feature_weekly_insights">Haftalık özet raporu</string>
+    <string name="paywall_feature_smart_reply">Akıllı yanıt önerileri</string>
+    <string name="paywall_feature_core_inbox">Temel gelen kutusu ve bildirimler</string>
+    <string name="paywall_column_feature">Özellik</string>
+    <string name="paywall_column_free">Ücretsiz</string>
+    <string name="paywall_column_pro">Pro</string>
+    <string name="paywall_included">Dahil</string>
+    <string name="paywall_not_included">Dahil değil</string>
+    <string name="paywall_price_per_period">%1$s / %2$s</string>
+    <string name="paywall_period_week">hafta</string>
+    <string name="paywall_period_month">ay</string>
+    <string name="paywall_period_3_months">3 ay</string>
+    <string name="paywall_period_6_months">6 ay</string>
+    <string name="paywall_period_year">yıl</string>
+
+    <!-- Settings -->
+    <string name="settings_section_plan">Plan</string>
+    <string name="settings_row_plan_title">Plan</string>
+    <string name="settings_plan_subtitle_pro">Pro — sınırsız geçmiş, reklamsız</string>
+    <string name="settings_plan_subtitle_free">Ücretsiz — %1$d günlük geçmiş, reklam gösterilir</string>
+    <string name="settings_section_smart_corrections">Akıllı düzeltmeler</string>
+    <string name="settings_row_learn_corrections_title">Düzeltmelerimden öğren</string>
+    <string name="settings_row_learn_corrections_subtitle">Benzer mesajları senin düzelttiğin şekilde sınıflandırır</string>
+    <string name="settings_section_vip_senders">VIP gönderenler</string>
+    <string name="settings_row_vip_senders_title">VIP gönderenler</string>
+    <string name="settings_row_vip_senders_subtitle">İşaretlenen gönderenleri/uygulamaları her zaman Eylem\'e yönlendir</string>
+    <string name="settings_section_weekly_insights">Haftalık özet</string>
+    <string name="settings_row_weekly_insights_title">Haftalık özet</string>
+    <string name="settings_row_weekly_insights_subtitle">Hacim, kategori dağılımı ve eskimiş BEKLEMEDE öğeleri</string>
+    <string name="settings_section_reminders">Hatırlatıcılar</string>
+    <string name="settings_row_digest_title">Günlük özet ve bekleme hatırlatmaları</string>
+    <string name="settings_row_digest_time_title">Özet saati</string>
+    <string name="settings_section_appearance">Görünüm</string>
+    <string name="settings_row_theme_title">Tema</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Açık</string>
+    <string name="theme_dark">Koyu</string>
+    <string name="settings_row_language_title">Dil</string>
+    <string name="settings_language_system_default">Sistem varsayılanı</string>
+    <string name="settings_section_debug_tools">Hata ayıklama araçları</string>
+    <string name="settings_row_simulate_pro_title">Pro\'yu Simüle Et</string>
+    <string name="settings_row_simulate_pro_subtitle">Gerçek satın alma değil — yalnızca test amaçlı</string>
+    <string name="settings_row_crash_log_title">Son çökme günlüğünü görüntüle</string>
+    <string name="settings_pro_chip">PRO</string>
+
+    <!-- Weekly insights -->
+    <string name="insights_not_enough_data">Henüz yeterli veri yok — ActionBox\'ı kullanmaya başladığın ilk haftadan sonra tekrar kontrol et.</string>
+    <string name="insights_this_week">Bu hafta</string>
+    <string name="insights_by_category">Kategoriye göre</string>
+    <string name="insights_still_waiting">Hâlâ beklemede</string>
+    <string name="insights_nothing_stale">5 günden uzun süredir çözülmemiş hiçbir şey yok — harika.</string>
+
+    <plurals name="insights_notifications_captured">
+        <item quantity="one">%1$d bildirim yakalandı</item>
+        <item quantity="other">%1$d bildirim yakalandı</item>
+    </plurals>
+    <plurals name="insights_stale_waiting_count">
+        <item quantity="one">%1$d öğe hâlâ 5+ gündür çözülmedi.</item>
+        <item quantity="other">%1$d öğe hâlâ 5+ gündür çözülmedi.</item>
+    </plurals>
+    <plurals name="paywall_retention_days">
+        <item quantity="one">%1$d gün</item>
+        <item quantity="other">%1$d gün</item>
+    </plurals>
+</resources>

@@ -33,7 +33,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.VipSenderEntity
 
@@ -64,7 +66,7 @@ fun VipSendersScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add VIP")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.vip_add_action))
             }
         }
     ) { contentPadding ->
@@ -75,8 +77,7 @@ fun VipSendersScreen(
                 .padding(16.dp)
         ) {
             Text(
-                text = "Notifications from a VIP sender or app always land in Action, regardless " +
-                    "of what the classifier would normally pick.",
+                text = stringResource(R.string.vip_screen_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -85,7 +86,7 @@ fun VipSendersScreen(
             if (vipSenders.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "No VIPs yet — tap + to add a sender or app.",
+                        text = stringResource(R.string.vip_empty_state),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -123,13 +124,13 @@ private fun VipRow(entry: VipSenderEntity, onRemove: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = resolveAppLabel(context, entry.sourceApp), style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = if (entry.sender.isBlank()) "Entire app" else entry.sender,
+                text = entry.sender.ifBlank { stringResource(R.string.vip_entire_app) },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         IconButton(onClick = onRemove) {
-            Icon(Icons.Filled.Delete, contentDescription = "Remove")
+            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_remove))
         }
     }
 }
@@ -141,6 +142,7 @@ private fun AddVipDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val entireAppLabel = stringResource(R.string.vip_entire_app)
     val distinctApps = remember(notifications) { notifications.map { it.sourceApp }.distinct().sorted() }
     var selectedApp by remember { mutableStateOf(distinctApps.firstOrNull().orEmpty()) }
     val sendersForApp = remember(notifications, selectedApp) {
@@ -154,16 +156,13 @@ private fun AddVipDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add VIP") },
+        title = { Text(stringResource(R.string.vip_add_dialog_title)) },
         text = {
             if (distinctApps.isEmpty()) {
-                Text(
-                    "No notifications captured yet — VIP entries are picked from apps and " +
-                        "senders you've already received notifications from."
-                )
+                Text(stringResource(R.string.vip_add_dialog_no_notifications))
             } else {
                 Column {
-                    Text("App", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.vip_add_dialog_app_label), style = MaterialTheme.typography.labelMedium)
                     PickerRow(
                         label = resolveAppLabel(context, selectedApp),
                         options = distinctApps,
@@ -171,11 +170,11 @@ private fun AddVipDialog(
                         onSelect = { selectedApp = it }
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("Sender (optional — blank = whole app)", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.vip_add_dialog_sender_label), style = MaterialTheme.typography.labelMedium)
                     PickerRow(
-                        label = selectedSender ?: "Entire app",
+                        label = selectedSender ?: entireAppLabel,
                         options = listOf(null) + sendersForApp,
-                        optionLabel = { it ?: "Entire app" },
+                        optionLabel = { it ?: entireAppLabel },
                         onSelect = { selectedSender = it }
                     )
                 }
@@ -185,9 +184,9 @@ private fun AddVipDialog(
             TextButton(
                 onClick = { onAdd(selectedApp, selectedSender.orEmpty()) },
                 enabled = selectedApp.isNotBlank()
-            ) { Text("Add") }
+            ) { Text(stringResource(R.string.action_add)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 

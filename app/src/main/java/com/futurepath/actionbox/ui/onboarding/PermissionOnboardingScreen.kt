@@ -63,7 +63,7 @@ fun PermissionOnboardingScreen(
 
         if (isAccessGranted) {
             Button(onClick = onContinueClick) {
-                Text("Continue")
+                Text(stringResource(R.string.action_continue))
             }
         } else {
             Button(onClick = onGrantAccessClick) {

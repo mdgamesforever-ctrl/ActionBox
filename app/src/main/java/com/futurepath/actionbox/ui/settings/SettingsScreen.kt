@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
@@ -51,10 +52,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.futurepath.actionbox.BuildConfig
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.billing.BillingRepository
+import com.futurepath.actionbox.data.AppLanguage
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.ThemeMode
@@ -97,25 +101,31 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 24.dp)
     ) {
-        SettingsSection(title = "Plan") {
+        SettingsSection(title = stringResource(R.string.settings_section_plan)) {
             SettingsRow(
                 icon = Icons.Filled.WorkspacePremium,
-                title = "Plan",
+                title = stringResource(R.string.settings_row_plan_title),
                 subtitle = if (isPro) {
-                    "Pro — unlimited history, no ads"
+                    stringResource(R.string.settings_plan_subtitle_pro)
                 } else {
-                    "Free — ${NotificationRepository.FREE_RETENTION_DAYS}-day history, ads shown"
+                    stringResource(R.string.settings_plan_subtitle_free, NotificationRepository.FREE_RETENTION_DAYS)
                 },
-                trailing = { Text(if (isPro) "Manage" else "Upgrade", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
+                trailing = {
+                    Text(
+                        stringResource(if (isPro) R.string.action_manage else R.string.action_upgrade),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                },
                 onClick = { if (isPro) openManageSubscription(context) else onUpgradeClick() }
             )
         }
 
-        SettingsSection(title = "Smart corrections") {
+        SettingsSection(title = stringResource(R.string.settings_section_smart_corrections)) {
             SettingsRow(
                 icon = Icons.Filled.AutoAwesome,
-                title = "Learn from my corrections",
-                subtitle = "Classifies similar messages the way you've corrected them",
+                title = stringResource(R.string.settings_row_learn_corrections_title),
+                subtitle = stringResource(R.string.settings_row_learn_corrections_subtitle),
                 trailing = {
                     if (isPro) {
                         Switch(checked = correctionLearningEnabled, onCheckedChange = onCorrectionLearningChange)
@@ -127,27 +137,27 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(title = "VIP senders") {
+        SettingsSection(title = stringResource(R.string.settings_section_vip_senders)) {
             SettingsRow(
                 icon = Icons.Filled.Star,
-                title = "VIP senders",
-                subtitle = "Always route flagged senders/apps to Action",
+                title = stringResource(R.string.settings_row_vip_senders_title),
+                subtitle = stringResource(R.string.settings_row_vip_senders_subtitle),
                 trailing = { if (isPro) TrailingChevron() else RequiresProChip() },
                 onClick = { if (!isPro) onUpgradeClick() else onOpenVipSenders() }
             )
         }
 
-        SettingsSection(title = "Weekly insights") {
+        SettingsSection(title = stringResource(R.string.settings_section_weekly_insights)) {
             SettingsRow(
                 icon = Icons.Filled.Insights,
-                title = "Weekly insights",
-                subtitle = "Volume, category breakdown, and stale WAITING items",
+                title = stringResource(R.string.settings_row_weekly_insights_title),
+                subtitle = stringResource(R.string.settings_row_weekly_insights_subtitle),
                 trailing = { if (isPro) TrailingChevron() else RequiresProChip() },
                 onClick = { if (!isPro) onUpgradeClick() else onOpenWeeklyInsights() }
             )
         }
 
-        SettingsSection(title = "Reminders") {
+        SettingsSection(title = stringResource(R.string.settings_section_reminders)) {
             DigestToggleRow(digestsEnabled = digestsEnabled, onDigestsEnabledChange = onDigestsEnabledChange)
             if (digestsEnabled) {
                 RowDivider()
@@ -155,8 +165,10 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(title = "Appearance") {
+        SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
             ThemeModeRow(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
+            RowDivider()
+            LanguageRow()
         }
 
         // Debug-only escape hatch for our own testing, since there's no Play Console listing
@@ -165,17 +177,17 @@ fun SettingsScreen(
         // eliminates this entire block (including the toggle and its callback) out of release
         // builds rather than just hiding it at runtime. Never shown to a real user.
         if (BuildConfig.DEBUG) {
-            SettingsSection(title = "Debug tools") {
+            SettingsSection(title = stringResource(R.string.settings_section_debug_tools)) {
                 SettingsRow(
                     icon = Icons.Filled.BugReport,
-                    title = "Simulate Pro",
-                    subtitle = "No real purchase — testing only",
+                    title = stringResource(R.string.settings_row_simulate_pro_title),
+                    subtitle = stringResource(R.string.settings_row_simulate_pro_subtitle),
                     trailing = { Switch(checked = isPro, onCheckedChange = onDebugProOverrideChange) }
                 )
                 RowDivider()
                 SettingsRow(
                     icon = Icons.Filled.Description,
-                    title = "View last crash log",
+                    title = stringResource(R.string.settings_row_crash_log_title),
                     trailing = { TrailingChevron() },
                     onClick = onViewCrashLogClick
                 )
@@ -208,8 +220,8 @@ private fun DigestToggleRow(digestsEnabled: Boolean, onDigestsEnabledChange: (Bo
 
     SettingsRow(
         icon = Icons.Filled.Notifications,
-        title = "Daily digest & waiting nudges",
-        subtitle = if (digestsEnabled) "On" else "Off",
+        title = stringResource(R.string.settings_row_digest_title),
+        subtitle = stringResource(if (digestsEnabled) R.string.state_on else R.string.state_off),
         trailing = {
             Switch(
                 checked = digestsEnabled,
@@ -238,7 +250,7 @@ private fun DigestTimeRow(time: DigestTime, onTimeChange: (DigestTime) -> Unit) 
     Box {
         SettingsRow(
             icon = Icons.Filled.Schedule,
-            title = "Digest time",
+            title = stringResource(R.string.settings_row_digest_time_title),
             subtitle = formatDigestTime(time),
             trailing = { TrailingChevron() },
             onClick = { expanded = true }
@@ -263,6 +275,11 @@ private val DIGEST_TIME_OPTIONS: List<DigestTime> = (0 until 24).flatMap { hour 
     listOf(DigestTime(hour, 0), DigestTime(hour, 30))
 }
 
+// Deliberately NOT localized (unlike every display string above) — this formats against a fixed
+// AM/PM 12-hour convention as a plain data value, the same way DateFormat.getDateTimeInstance()
+// calls elsewhere in this app render timestamps using the JVM's own locale-aware formatting
+// rather than a hand-rolled one; a full locale-correct time-of-day formatter is a larger change
+// than this task's "translate ActionBox's own UI strings" scope covers.
 private fun formatDigestTime(time: DigestTime): String {
     val amPm = if (time.hour < 12) "AM" else "PM"
     val hour12 = time.hour % 12
@@ -275,7 +292,7 @@ private fun ThemeModeRow(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) ->
     Box {
         SettingsRow(
             icon = Icons.Filled.DarkMode,
-            title = "Theme",
+            title = stringResource(R.string.settings_row_theme_title),
             subtitle = formatThemeMode(themeMode),
             trailing = { TrailingChevron() },
             onClick = { expanded = true }
@@ -294,10 +311,48 @@ private fun ThemeModeRow(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) ->
     }
 }
 
+@Composable
 private fun formatThemeMode(mode: ThemeMode): String = when (mode) {
-    ThemeMode.SYSTEM -> "System"
-    ThemeMode.LIGHT -> "Light"
-    ThemeMode.DARK -> "Dark"
+    ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
+    ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+    ThemeMode.DARK -> stringResource(R.string.theme_dark)
+}
+
+/**
+ * Settings -> Appearance -> Language — separate from and unrelated to [ThemeMode]: picking a
+ * language here only changes ActionBox's own UI strings (see [AppLanguage]'s doc), never how
+ * notifications are classified. [AppLanguage.apply] triggers an Activity recreate immediately
+ * (the standard AppCompatDelegate.setApplicationLocales behavior), so [current] only needs to
+ * hold what's already applied at first composition — the recreate itself is what actually
+ * re-renders everything in the newly-selected language.
+ */
+@Composable
+private fun LanguageRow() {
+    var expanded by remember { mutableStateOf(false) }
+    var current by remember { mutableStateOf(AppLanguage.current()) }
+    val systemDefaultLabel = stringResource(R.string.settings_language_system_default)
+
+    Box {
+        SettingsRow(
+            icon = Icons.Filled.Language,
+            title = stringResource(R.string.settings_row_language_title),
+            subtitle = if (current == AppLanguage.SYSTEM_DEFAULT) systemDefaultLabel else current.nativeName,
+            trailing = { TrailingChevron() },
+            onClick = { expanded = true }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            AppLanguage.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(if (option == AppLanguage.SYSTEM_DEFAULT) systemDefaultLabel else option.nativeName) },
+                    onClick = {
+                        expanded = false
+                        current = option
+                        option.apply()
+                    }
+                )
+            }
+        }
+    }
 }
 
 /** A titled group of [SettingsRow]s in one rounded card, with breathing room before the next
@@ -386,7 +441,7 @@ private fun RequiresProChip() {
         shape = RoundedCornerShape(6.dp)
     ) {
         Text(
-            text = "PRO",
+            text = stringResource(R.string.settings_pro_chip),
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )

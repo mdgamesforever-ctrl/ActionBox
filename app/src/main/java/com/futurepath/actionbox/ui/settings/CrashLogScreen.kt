@@ -23,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.diagnostics.CrashLogger
 
 /**
@@ -39,6 +41,7 @@ fun CrashLogScreen() {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val crashText = remember { CrashLogger.readLastCrash(context) }
+    val shareChooserTitle = stringResource(R.string.crash_log_share_chooser_title)
 
     Column(
         modifier = Modifier
@@ -53,26 +56,23 @@ fun CrashLogScreen() {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No crash has been recorded since this app was installed (or since its " +
-                        "data was last cleared).",
+                    text = stringResource(R.string.crash_log_none_recorded),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
         } else {
             Text(
-                text = "A copy of every recorded crash is also saved directly to your phone's " +
-                    "Downloads folder (as ActionBox_crash_<timestamp>.txt) — open it with any " +
-                    "file manager if you'd rather not use Copy/Share below.",
+                text = stringResource(R.string.crash_log_downloads_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { clipboardManager.setText(AnnotatedString(crashText)) }) {
-                    Text("Copy")
+                    Text(stringResource(R.string.action_copy))
                 }
-                Button(onClick = { shareCrashLog(context, crashText) }) {
-                    Text("Share")
+                Button(onClick = { shareCrashLog(context, crashText, shareChooserTitle) }) {
+                    Text(stringResource(R.string.action_share))
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -87,10 +87,10 @@ fun CrashLogScreen() {
     }
 }
 
-private fun shareCrashLog(context: Context, crashText: String) {
+private fun shareCrashLog(context: Context, crashText: String, chooserTitle: String) {
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, crashText)
     }
-    context.startActivity(Intent.createChooser(shareIntent, "Share crash log"))
+    context.startActivity(Intent.createChooser(shareIntent, chooserTitle))
 }

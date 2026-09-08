@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.data.NotificationEntity
 
@@ -83,9 +85,9 @@ private fun SwipeBackground(targetValue: SwipeToDismissBoxValue) {
     ) {
         when (targetValue) {
             SwipeToDismissBoxValue.StartToEnd ->
-                Icon(Icons.Filled.CheckCircle, contentDescription = "Mark handled", tint = Color.White)
+                Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.action_mark_handled), tint = Color.White)
             SwipeToDismissBoxValue.EndToStart ->
-                Icon(Icons.Filled.Snooze, contentDescription = "Snooze", tint = Color.White)
+                Icon(Icons.Filled.Snooze, contentDescription = stringResource(R.string.action_snooze), tint = Color.White)
             SwipeToDismissBoxValue.Settled -> Unit
         }
     }

@@ -1,0 +1,186 @@
+<resources>
+    <string name="app_name">ActionBox</string>
+
+    <string name="onboarding_title">امنح ActionBox إذن قراءة الإشعارات</string>
+    <string name="onboarding_body">ينظّم ActionBox الإشعارات الواردة (مثل رسائل واتساب والرسائل النصية والبريد الإلكتروني) إلى عناصر قابلة للتنفيذ. للقيام بذلك، يحتاج إلى إذن لقراءة محتوى الإشعارات.\n\nيبقى محتوى إشعاراتك على هذا الجهاز ولا يُرفع إلى أي مكان أبدًا — يتم التصنيف بالكامل على الجهاز. (تعرض الخطة المجانية إعلانات، ومشتريات Pro تتم عبر Google Play؛ ولا يرى أي منهما محتوى إشعاراتك.) يمكنك إلغاء إذن الوصول إلى الإشعارات في أي وقت من إعدادات النظام.</string>
+    <string name="onboarding_grant_button">فتح إعدادات الوصول إلى الإشعارات</string>
+    <string name="onboarding_status_granted">تم منح إذن الوصول إلى الإشعارات. يقوم ActionBox بالتقاط الإشعارات.</string>
+    <string name="onboarding_status_not_granted">لم يُمنح إذن الوصول إلى الإشعارات بعد.</string>
+
+    <string name="feed_title">الإشعارات الملتقطة</string>
+    <string name="feed_empty">لم يتم التقاط أي إشعارات بعد. أرسل إشعارًا من تطبيق آخر (واتساب، رسالة نصية، جيميل، إلخ) لتراه يظهر هنا.</string>
+
+    <string name="widget_label">ActionBox</string>
+    <string name="widget_description">عدّاد مباشر لما يحتاج انتباهك — إجراء، بانتظار، موعد نهائي، ورد. حصري لمشتركي Pro.</string>
+    <string name="widget_upgrade_placeholder">اشترك في Pro لإضافة هذه الأداة</string>
+    <string name="widget_load_error">تعذّر التحميل — اضغط لفتح ActionBox</string>
+
+    <!-- Category / tab names -->
+    <string name="tab_action">إجراء</string>
+    <string name="tab_waiting">بانتظار</string>
+    <string name="tab_deadline">موعد نهائي</string>
+    <string name="tab_reply">رد</string>
+    <string name="tab_other">أخرى</string>
+    <string name="tab_settings">الإعدادات</string>
+
+    <string name="category_action">إجراء</string>
+    <string name="category_reply">رد</string>
+    <string name="category_waiting">بانتظار</string>
+    <string name="category_deadline">موعد نهائي</string>
+    <string name="category_fyi">للعلم</string>
+    <string name="category_noise">ضوضاء</string>
+
+    <!-- Screen titles -->
+    <string name="title_upgrade_to_pro">الترقية إلى Pro</string>
+    <string name="title_debug_feed">سجل التصحيح</string>
+    <string name="title_crash_log">سجل الأعطال</string>
+    <string name="title_vip_senders">المرسلون المميزون</string>
+    <string name="title_weekly_insights">الإحصائيات الأسبوعية</string>
+
+    <!-- Common actions -->
+    <string name="action_search">بحث</string>
+    <string name="action_continue">متابعة</string>
+    <string name="action_undo">تراجع</string>
+    <string name="action_cancel">إلغاء</string>
+    <string name="action_add">إضافة</string>
+    <string name="action_remove">إزالة</string>
+    <string name="action_copy">نسخ</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_manage">إدارة</string>
+    <string name="action_upgrade">ترقية</string>
+    <string name="action_try_again">أعد المحاولة</string>
+    <string name="action_subscribe">اشترك</string>
+    <string name="action_continue_with_free">المتابعة بالخطة المجانية</string>
+    <string name="action_mark_handled">وضع علامة \"تم التعامل معه\"</string>
+    <string name="action_snooze">تأجيل</string>
+    <string name="action_show_more">عرض المزيد</string>
+    <string name="action_show_less">عرض أقل</string>
+    <string name="state_on">تشغيل</string>
+    <string name="state_off">إيقاف</string>
+
+    <!-- Notification card -->
+    <string name="label_summary_prefix">الملخص: %1$s</string>
+    <string name="label_needs_review">⚠ يحتاج مراجعة — ثقة منخفضة (%1$d%%)</string>
+    <string name="label_not_sure">❓ غير متأكد؟ — اضغط للتحقق (%1$d%%)</string>
+    <string name="label_corrected">(تم التصحيح)</string>
+    <string name="toast_copied">تم نسخ \"%1$s\"</string>
+
+    <!-- Search -->
+    <string name="search_field_label">ابحث بالمرسل أو نص الرسالة</string>
+    <string name="search_empty_prompt">ابحث في كل إشعار قمت بتخزينه، بغض النظر عن الفئة أو التطبيق.</string>
+    <string name="search_no_matches">لا توجد نتائج لـ \"%1$s\".</string>
+
+    <!-- Category inbox -->
+    <string name="snackbar_marked_handled">تم وضع علامة \"تم التعامل معه\"</string>
+    <string name="snackbar_snoozed_until">تم التأجيل حتى %1$s</string>
+    <string name="dialog_snooze_until_title">تأجيل حتى…</string>
+    <string name="snooze_one_hour">ساعة واحدة</string>
+    <string name="snooze_tomorrow">غدًا</string>
+    <string name="snooze_next_week">الأسبوع القادم</string>
+    <string name="empty_inbox_action">لا يوجد ما يتطلب إجراءً الآن.</string>
+    <string name="empty_inbox_waiting">لا يوجد ما تنتظره الآن.</string>
+    <string name="empty_inbox_deadline">لا توجد مواعيد نهائية قادمة.</string>
+    <string name="empty_inbox_reply">لا توجد رسائل بانتظار الرد.</string>
+    <string name="empty_inbox_other">لا يوجد شيء هنا — ستظهر إشعارات \"للعلم\" والضوضاء في هذا التبويب.</string>
+
+    <!-- Crash log -->
+    <string name="crash_log_share_chooser_title">مشاركة سجل الأعطال</string>
+    <string name="crash_log_none_recorded">لم يتم تسجيل أي عطل منذ تثبيت هذا التطبيق (أو منذ آخر مسح لبياناته).</string>
+    <string name="crash_log_downloads_note">تُحفظ أيضًا نسخة من كل عطل مسجَّل مباشرة في مجلد التنزيلات بهاتفك (باسم ActionBox_crash_&lt;timestamp&gt;.txt) — افتحها بأي مدير ملفات إن كنت تفضل عدم استخدام النسخ/المشاركة أدناه.</string>
+
+    <!-- VIP senders -->
+    <string name="vip_add_action">إضافة مرسل مميز</string>
+    <string name="vip_screen_subtitle">الإشعارات من مرسل أو تطبيق مميز تصل دائمًا إلى تبويب \"إجراء\"، بغض النظر عمّا يختاره المصنّف عادةً.</string>
+    <string name="vip_empty_state">لا يوجد مرسلون مميزون بعد — اضغط على + لإضافة مرسل أو تطبيق.</string>
+    <string name="vip_entire_app">التطبيق بالكامل</string>
+    <string name="vip_add_dialog_title">إضافة مرسل مميز</string>
+    <string name="vip_add_dialog_no_notifications">لم يتم التقاط أي إشعارات بعد — يتم اختيار المرسلين المميزين من التطبيقات والمرسلين الذين استلمت منهم إشعارات بالفعل.</string>
+    <string name="vip_add_dialog_app_label">التطبيق</string>
+    <string name="vip_add_dialog_sender_label">المرسل (اختياري — اتركه فارغًا لكامل التطبيق)</string>
+
+    <!-- Paywall -->
+    <string name="paywall_subtitle">احصل على سجل غير محدود، وصندوق وارد خالٍ من الإعلانات، وتصنيف أذكى.</string>
+    <string name="paywall_billing_unavailable">خدمة الفوترة من Google Play غير متاحة حاليًا. تحقق من اتصالك وأعد المحاولة.</string>
+    <string name="paywall_unlimited">غير محدود</string>
+    <string name="paywall_feature_history">سجل الإشعارات</string>
+    <string name="paywall_feature_ad_free">تجربة خالية من الإعلانات</string>
+    <string name="paywall_feature_smart_corrections">تصحيحات ذكية</string>
+    <string name="paywall_feature_widget">أداة الشاشة الرئيسية</string>
+    <string name="paywall_feature_vip">تصعيد المرسلين المميزين</string>
+    <string name="paywall_feature_weekly_insights">تقرير الإحصائيات الأسبوعية</string>
+    <string name="paywall_feature_smart_reply">اقتراحات الرد الذكي</string>
+    <string name="paywall_feature_core_inbox">صندوق الوارد الأساسي والإشعارات</string>
+    <string name="paywall_column_feature">الميزة</string>
+    <string name="paywall_column_free">مجاني</string>
+    <string name="paywall_column_pro">Pro</string>
+    <string name="paywall_included">مُتضمَّن</string>
+    <string name="paywall_not_included">غير مُتضمَّن</string>
+    <string name="paywall_price_per_period">%1$s / %2$s</string>
+    <string name="paywall_period_week">أسبوع</string>
+    <string name="paywall_period_month">شهر</string>
+    <string name="paywall_period_3_months">3 أشهر</string>
+    <string name="paywall_period_6_months">6 أشهر</string>
+    <string name="paywall_period_year">سنة</string>
+
+    <!-- Settings -->
+    <string name="settings_section_plan">الخطة</string>
+    <string name="settings_row_plan_title">الخطة</string>
+    <string name="settings_plan_subtitle_pro">Pro — سجل غير محدود، بدون إعلانات</string>
+    <string name="settings_plan_subtitle_free">مجاني — سجل %1$d يومًا، مع عرض إعلانات</string>
+    <string name="settings_section_smart_corrections">التصحيحات الذكية</string>
+    <string name="settings_row_learn_corrections_title">التعلّم من تصحيحاتي</string>
+    <string name="settings_row_learn_corrections_subtitle">يصنّف الرسائل المشابهة بالطريقة التي صححتها بها</string>
+    <string name="settings_section_vip_senders">المرسلون المميزون</string>
+    <string name="settings_row_vip_senders_title">المرسلون المميزون</string>
+    <string name="settings_row_vip_senders_subtitle">توجيه المرسلين/التطبيقات المميزة دائمًا إلى \"إجراء\"</string>
+    <string name="settings_section_weekly_insights">الإحصائيات الأسبوعية</string>
+    <string name="settings_row_weekly_insights_title">الإحصائيات الأسبوعية</string>
+    <string name="settings_row_weekly_insights_subtitle">الحجم، وتوزيع الفئات، وعناصر \"بانتظار\" المتأخرة</string>
+    <string name="settings_section_reminders">التذكيرات</string>
+    <string name="settings_row_digest_title">الملخص اليومي وتذكيرات الانتظار</string>
+    <string name="settings_row_digest_time_title">وقت الملخص</string>
+    <string name="settings_section_appearance">المظهر</string>
+    <string name="settings_row_theme_title">السمة</string>
+    <string name="theme_system">النظام</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+    <string name="settings_row_language_title">اللغة</string>
+    <string name="settings_language_system_default">لغة النظام</string>
+    <string name="settings_section_debug_tools">أدوات التصحيح</string>
+    <string name="settings_row_simulate_pro_title">محاكاة Pro</string>
+    <string name="settings_row_simulate_pro_subtitle">لا يوجد شراء حقيقي — للاختبار فقط</string>
+    <string name="settings_row_crash_log_title">عرض آخر سجل عطل</string>
+    <string name="settings_pro_chip">PRO</string>
+
+    <!-- Weekly insights -->
+    <string name="insights_not_enough_data">لا توجد بيانات كافية بعد — تحقق مرة أخرى بعد أسبوعك الأول في استخدام ActionBox.</string>
+    <string name="insights_this_week">هذا الأسبوع</string>
+    <string name="insights_by_category">حسب الفئة</string>
+    <string name="insights_still_waiting">لا يزال بانتظار</string>
+    <string name="insights_nothing_stale">لا يوجد شيء معلّق منذ أكثر من 5 أيام — رائع.</string>
+
+    <plurals name="insights_notifications_captured">
+        <item quantity="zero">لم يتم التقاط أي إشعارات</item>
+        <item quantity="one">تم التقاط إشعار واحد</item>
+        <item quantity="two">تم التقاط إشعارين</item>
+        <item quantity="few">تم التقاط %1$d إشعارات</item>
+        <item quantity="many">تم التقاط %1$d إشعارًا</item>
+        <item quantity="other">تم التقاط %1$d إشعار</item>
+    </plurals>
+    <plurals name="insights_stale_waiting_count">
+        <item quantity="zero">لا توجد عناصر معلّقة منذ 5+ أيام</item>
+        <item quantity="one">عنصر واحد لا يزال معلّقًا منذ 5+ أيام</item>
+        <item quantity="two">عنصران لا يزالان معلّقين منذ 5+ أيام</item>
+        <item quantity="few">%1$d عناصر لا تزال معلّقة منذ 5+ أيام</item>
+        <item quantity="many">%1$d عنصرًا لا يزال معلّقًا منذ 5+ أيام</item>
+        <item quantity="other">%1$d عنصر لا يزال معلّقًا منذ 5+ أيام</item>
+    </plurals>
+    <plurals name="paywall_retention_days">
+        <item quantity="zero">%1$d يوم</item>
+        <item quantity="one">يوم واحد</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%1$d أيام</item>
+        <item quantity="many">%1$d يومًا</item>
+        <item quantity="other">%1$d يوم</item>
+    </plurals>
+</resources>

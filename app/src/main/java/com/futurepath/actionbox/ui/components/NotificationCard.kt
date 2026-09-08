@@ -31,12 +31,14 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.futurepath.actionbox.BuildConfig
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.ConfidenceTier
 import com.futurepath.actionbox.classification.SmartReplySuggester
@@ -99,7 +101,7 @@ fun NotificationCard(
             }
             notification.extractedSummary?.let { summary ->
                 Text(
-                    text = "Summary: $summary",
+                    text = stringResource(R.string.label_summary_prefix, summary),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 4.dp)
                 )
@@ -113,8 +115,13 @@ fun NotificationCard(
                 }
             }
             attentionTier?.let { tier ->
+                val score = notification.confidenceScore ?: 0
+                val label = when (tier) {
+                    ConfidenceTier.LOW -> stringResource(R.string.label_needs_review, score)
+                    else -> stringResource(R.string.label_not_sure, score) // UNCERTAIN
+                }
                 Text(
-                    text = attentionLabel(tier, notification.confidenceScore ?: 0),
+                    text = label,
                     style = MaterialTheme.typography.labelSmall,
                     color = attentionColor(tier),
                     modifier = Modifier.padding(top = 4.dp)
@@ -153,7 +160,7 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
                     .background(badgeColor(state))
             ) {
                 Text(
-                    text = state.name,
+                    text = stringResource(state.labelRes()),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
                     modifier = Modifier
@@ -171,7 +178,7 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
             DropdownMenu(expanded = pickerExpanded, onDismissRequest = { pickerExpanded = false }) {
                 ClassifiedState.values().forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(option.name) },
+                        text = { Text(stringResource(option.labelRes())) },
                         onClick = {
                             pickerExpanded = false
                             onPick(option)
@@ -182,7 +189,7 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
         }
         if (isCorrected) {
             Text(
-                text = "(corrected)",
+                text = stringResource(R.string.label_corrected),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp)
@@ -202,6 +209,7 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
 private fun SmartReplyRow(suggestions: List<String>) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
+    val copiedFormat = stringResource(R.string.toast_copied)
 
     Row(
         modifier = Modifier
@@ -213,7 +221,7 @@ private fun SmartReplyRow(suggestions: List<String>) {
             AssistChip(
                 onClick = {
                     clipboardManager.setText(AnnotatedString(suggestion))
-                    Toast.makeText(context, "Copied \"$suggestion\"", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, String.format(copiedFormat, suggestion), Toast.LENGTH_SHORT).show()
                 },
                 label = { Text(suggestion, style = MaterialTheme.typography.labelMedium) }
             )
@@ -252,7 +260,7 @@ private fun ExpandableText(text: String, style: TextStyle) {
         )
         if (isOverflowing || expanded) {
             Text(
-                text = if (expanded) "Show less" else "Show more",
+                text = stringResource(if (expanded) R.string.action_show_less else R.string.action_show_more),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
@@ -275,12 +283,6 @@ fun badgeColor(state: ClassifiedState): Color = when (state) {
 private fun attentionColor(tier: ConfidenceTier): Color = when (tier) {
     ConfidenceTier.LOW -> Color(0xFFC62828)
     else -> Color(0xFFF9A825) // UNCERTAIN
-}
-
-private fun attentionLabel(tier: ConfidenceTier, score: Int): String = when (tier) {
-    ConfidenceTier.LOW -> "⚠ Needs review — low confidence ($score%)"
-    ConfidenceTier.UNCERTAIN -> "❓ Not sure? — tap to verify ($score%)"
-    else -> ""
 }
 
 /** Dashed outline distinguishing a low/uncertain-confidence row from a normal card. */

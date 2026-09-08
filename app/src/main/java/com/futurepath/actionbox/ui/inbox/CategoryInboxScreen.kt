@@ -24,7 +24,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.reminders.SnoozeCalculator
@@ -65,6 +67,10 @@ fun CategoryInboxScreen(
     val scope = rememberCoroutineScope()
     var snoozeTargetId by remember { mutableStateOf<Long?>(null) }
 
+    val undoActionLabel = stringResource(R.string.action_undo)
+    val markedHandledMessage = stringResource(R.string.snackbar_marked_handled)
+    val snoozedUntilFormat = stringResource(R.string.snackbar_snoozed_until)
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (items.isEmpty()) {
             Box(
@@ -74,7 +80,7 @@ fun CategoryInboxScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = emptyMessageFor(tab),
+                    text = stringResource(emptyMessageResFor(tab)),
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -92,7 +98,7 @@ fun CategoryInboxScreen(
                         isPro = isPro,
                         onMarkHandled = { id ->
                             onMarkHandled(id)
-                            showUndoSnackbar(scope, snackbarHostState, "Marked as handled") {
+                            showUndoSnackbar(scope, snackbarHostState, markedHandledMessage, undoActionLabel) {
                                 onUndoHandled(id)
                             }
                         },
@@ -109,7 +115,8 @@ fun CategoryInboxScreen(
         SnoozeDurationDialog(
             onSelect = { duration ->
                 onSnooze(id, duration)
-                showUndoSnackbar(scope, snackbarHostState, "Snoozed until ${formatSnoozeUntil(duration)}") {
+                val message = String.format(snoozedUntilFormat, formatSnoozeUntil(duration))
+                showUndoSnackbar(scope, snackbarHostState, message, undoActionLabel) {
                     onUndoSnooze(id)
                 }
                 snoozeTargetId = null
@@ -130,13 +137,14 @@ private fun showUndoSnackbar(
     scope: CoroutineScope,
     snackbarHostState: SnackbarHostState,
     message: String,
+    actionLabel: String,
     onUndo: () -> Unit
 ) {
     scope.launch {
         snackbarHostState.currentSnackbarData?.dismiss()
         val result = snackbarHostState.showSnackbar(
             message = message,
-            actionLabel = "Undo",
+            actionLabel = actionLabel,
             duration = SnackbarDuration.Short
         )
         if (result == SnackbarResult.ActionPerformed) {
@@ -155,29 +163,42 @@ private fun formatSnoozeUntil(duration: SnoozeDuration): String {
     return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(untilMs))
 }
 
+/**
+ * The localized duration label shown in [SnoozeDurationDialog] — deliberately separate from
+ * [SnoozeCalculator.label] (which stays a plain, English-only pure function backing
+ * SnoozeCalculatorTest) since that's pure decision logic with its own JVM unit test, not display
+ * text; only the UI-facing label needs to follow the app's selected language.
+ */
+@Composable
+private fun snoozeDurationLabel(duration: SnoozeDuration): String = when (duration) {
+    SnoozeDuration.ONE_HOUR -> stringResource(R.string.snooze_one_hour)
+    SnoozeDuration.TOMORROW -> stringResource(R.string.snooze_tomorrow)
+    SnoozeDuration.NEXT_WEEK -> stringResource(R.string.snooze_next_week)
+}
+
 @Composable
 private fun SnoozeDurationDialog(onSelect: (SnoozeDuration) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Snooze until…") },
+        title = { Text(stringResource(R.string.dialog_snooze_until_title)) },
         text = {
             Column {
                 SnoozeDuration.entries.forEach { duration ->
                     TextButton(onClick = { onSelect(duration) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(SnoozeCalculator.label(duration))
+                        Text(snoozeDurationLabel(duration))
                     }
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
-private fun emptyMessageFor(tab: InboxTab): String = when (tab) {
-    InboxTab.ACTION -> "Nothing needs action right now."
-    InboxTab.WAITING -> "Nothing you're waiting on right now."
-    InboxTab.DEADLINE -> "No upcoming deadlines."
-    InboxTab.REPLY -> "No messages waiting on a reply."
-    InboxTab.OTHER -> "Nothing here — FYI notices and noise will show up in this tab."
+private fun emptyMessageResFor(tab: InboxTab): Int = when (tab) {
+    InboxTab.ACTION -> R.string.empty_inbox_action
+    InboxTab.WAITING -> R.string.empty_inbox_waiting
+    InboxTab.DEADLINE -> R.string.empty_inbox_deadline
+    InboxTab.REPLY -> R.string.empty_inbox_reply
+    InboxTab.OTHER -> R.string.empty_inbox_other
 }

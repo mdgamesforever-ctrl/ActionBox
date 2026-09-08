@@ -21,6 +21,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.futurepath.actionbox.MainActivity
+import com.futurepath.actionbox.R
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.data.groupActiveByCategory
@@ -122,7 +123,7 @@ private fun UpgradePlaceholder(context: Context) {
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally
     ) {
         Text(
-            text = "Upgrade to Pro to add this widget",
+            text = context.getString(R.string.widget_upgrade_placeholder),
             style = TextStyle(color = ColorProvider(Color.WHITE), fontWeight = FontWeight.Medium)
         )
     }
@@ -144,7 +145,7 @@ private fun WidgetContent(context: Context, counts: Map<InboxTab, Int>) {
     ) {
         WIDGET_TABS.forEach { tab ->
             Text(
-                text = "${counts[tab] ?: 0} ${tab.label}",
+                text = "${counts[tab] ?: 0} ${context.getString(tab.labelRes)}",
                 style = TextStyle(color = ColorProvider(Color.WHITE), fontWeight = FontWeight.Medium),
                 modifier = GlanceModifier
                     .padding(4)
@@ -168,7 +169,7 @@ private fun WidgetErrorState(context: Context) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Couldn't load — tap to open ActionBox",
+            text = context.getString(R.string.widget_load_error),
             style = TextStyle(color = ColorProvider(Color.WHITE), fontWeight = FontWeight.Medium)
         )
     }

@@ -1,0 +1,174 @@
+<resources>
+    <string name="app_name">ActionBox</string>
+
+    <string name="onboarding_title">ActionBox کو اپنی اطلاعات پڑھنے کی اجازت دیں</string>
+    <string name="onboarding_body">ActionBox آنے والی اطلاعات (جیسے WhatsApp پیغامات، SMS اور ای میلز) کو قابلِ عمل چیزوں میں ترتیب دیتا ہے۔ اس کے لیے اسے اطلاعات کا مواد پڑھنے کی اجازت درکار ہے۔\n\nآپ کی اطلاعات کا مواد اسی ڈیوائس پر رہتا ہے اور کہیں بھی اپ لوڈ نہیں ہوتا — درجہ بندی مکمل طور پر ڈیوائس پر ہی ہوتی ہے۔ (مفت پلان اشتہارات دکھاتا ہے، اور Pro کی خریداری Google Play کے ذریعے ہوتی ہے؛ ان میں سے کوئی بھی آپ کی اطلاعات کا مواد نہیں دیکھتا۔) آپ کسی بھی وقت سسٹم کی ترتیبات سے اطلاعات کی رسائی منسوخ کر سکتے ہیں۔</string>
+    <string name="onboarding_grant_button">اطلاعات تک رسائی کی ترتیبات کھولیں</string>
+    <string name="onboarding_status_granted">اطلاعات تک رسائی دے دی گئی ہے۔ ActionBox اطلاعات حاصل کر رہا ہے۔</string>
+    <string name="onboarding_status_not_granted">اطلاعات تک رسائی ابھی تک نہیں دی گئی۔</string>
+
+    <string name="feed_title">حاصل کردہ اطلاعات</string>
+    <string name="feed_empty">ابھی تک کوئی اطلاع حاصل نہیں ہوئی۔ اسے یہاں ظاہر ہوتے دیکھنے کے لیے کسی دوسری ایپ (WhatsApp، SMS، Gmail وغیرہ) سے کوئی اطلاع بھیجیں۔</string>
+
+    <string name="widget_label">ActionBox</string>
+    <string name="widget_description">آپ کی توجہ درکار چیزوں کی لائیو گنتی — عمل، انتظار، آخری تاریخ اور جواب۔ صرف Pro کے لیے۔</string>
+    <string name="widget_upgrade_placeholder">یہ ویجیٹ شامل کرنے کے لیے Pro میں اپ گریڈ کریں</string>
+    <string name="widget_load_error">لوڈ نہیں ہو سکا — ActionBox کھولنے کے لیے تھپتھپائیں</string>
+
+    <!-- Category / tab names -->
+    <string name="tab_action">عمل</string>
+    <string name="tab_waiting">انتظار</string>
+    <string name="tab_deadline">آخری تاریخ</string>
+    <string name="tab_reply">جواب</string>
+    <string name="tab_other">دیگر</string>
+    <string name="tab_settings">ترتیبات</string>
+
+    <string name="category_action">عمل</string>
+    <string name="category_reply">جواب</string>
+    <string name="category_waiting">انتظار</string>
+    <string name="category_deadline">آخری تاریخ</string>
+    <string name="category_fyi">برائے معلومات</string>
+    <string name="category_noise">غیر ضروری</string>
+
+    <!-- Screen titles -->
+    <string name="title_upgrade_to_pro">Pro میں اپ گریڈ کریں</string>
+    <string name="title_debug_feed">ڈیبگ فیڈ</string>
+    <string name="title_crash_log">کریش لاگ</string>
+    <string name="title_vip_senders">VIP بھیجنے والے</string>
+    <string name="title_weekly_insights">ہفتہ وار جائزہ</string>
+
+    <!-- Common actions -->
+    <string name="action_search">تلاش کریں</string>
+    <string name="action_continue">جاری رکھیں</string>
+    <string name="action_undo">واپس لائیں</string>
+    <string name="action_cancel">منسوخ کریں</string>
+    <string name="action_add">شامل کریں</string>
+    <string name="action_remove">ہٹائیں</string>
+    <string name="action_copy">کاپی کریں</string>
+    <string name="action_share">شیئر کریں</string>
+    <string name="action_manage">منظم کریں</string>
+    <string name="action_upgrade">اپ گریڈ کریں</string>
+    <string name="action_try_again">دوبارہ کوشش کریں</string>
+    <string name="action_subscribe">سبسکرائب کریں</string>
+    <string name="action_continue_with_free">مفت پلان کے ساتھ جاری رکھیں</string>
+    <string name="action_mark_handled">نمٹا دیا گیا کے طور پر نشان زد کریں</string>
+    <string name="action_snooze">مؤخر کریں</string>
+    <string name="action_show_more">مزید دکھائیں</string>
+    <string name="action_show_less">کم دکھائیں</string>
+    <string name="state_on">آن</string>
+    <string name="state_off">آف</string>
+
+    <!-- Notification card -->
+    <string name="label_summary_prefix">خلاصہ: %1$s</string>
+    <string name="label_needs_review">⚠ جائزے کی ضرورت ہے — کم اعتماد (%1$d%%)</string>
+    <string name="label_not_sure">❓ یقین نہیں؟ — تصدیق کے لیے تھپتھپائیں (%1$d%%)</string>
+    <string name="label_corrected">(درست کیا گیا)</string>
+    <string name="toast_copied">\"%1$s\" کاپی ہو گیا</string>
+
+    <!-- Search -->
+    <string name="search_field_label">بھیجنے والے یا پیغام سے تلاش کریں</string>
+    <string name="search_empty_prompt">قسم یا ایپ سے قطع نظر، اپنی تمام محفوظ شدہ اطلاعات میں تلاش کریں۔</string>
+    <string name="search_no_matches">\"%1$s\" کے لیے کوئی نتیجہ نہیں ملا۔</string>
+
+    <!-- Category inbox -->
+    <string name="snackbar_marked_handled">نمٹا دیا گیا کے طور پر نشان زد کر دیا گیا</string>
+    <string name="snackbar_snoozed_until">%1$s تک مؤخر کر دیا گیا</string>
+    <string name="dialog_snooze_until_title">اس وقت تک مؤخر کریں…</string>
+    <string name="snooze_one_hour">1 گھنٹہ</string>
+    <string name="snooze_tomorrow">کل</string>
+    <string name="snooze_next_week">اگلا ہفتہ</string>
+    <string name="empty_inbox_action">ابھی کسی عمل کی ضرورت نہیں ہے۔</string>
+    <string name="empty_inbox_waiting">ابھی آپ کے انتظار میں کچھ نہیں ہے۔</string>
+    <string name="empty_inbox_deadline">کوئی آنے والی آخری تاریخ نہیں ہے۔</string>
+    <string name="empty_inbox_reply">جواب کے منتظر کوئی پیغام نہیں ہے۔</string>
+    <string name="empty_inbox_other">یہاں کچھ نہیں ہے — برائے معلومات اور غیر ضروری اطلاعات اس ٹیب میں ظاہر ہوں گی۔</string>
+
+    <!-- Crash log -->
+    <string name="crash_log_share_chooser_title">کریش لاگ شیئر کریں</string>
+    <string name="crash_log_none_recorded">اس ایپ کے انسٹال ہونے کے بعد سے (یا اس کا ڈیٹا آخری بار صاف ہونے کے بعد سے) کوئی کریش ریکارڈ نہیں ہوا۔</string>
+    <string name="crash_log_downloads_note">ہر ریکارڈ شدہ کریش کی ایک کاپی آپ کے فون کے Downloads فولڈر میں بھی براہ راست محفوظ ہوتی ہے (ActionBox_crash_&lt;timestamp&gt;.txt کے طور پر) — اگر آپ نیچے Copy/Share استعمال نہیں کرنا چاہتے تو اسے کسی بھی فائل مینیجر سے کھولیں۔</string>
+
+    <!-- VIP senders -->
+    <string name="vip_add_action">VIP شامل کریں</string>
+    <string name="vip_screen_subtitle">کسی VIP بھیجنے والے یا ایپ کی اطلاعات ہمیشہ عمل میں جاتی ہیں، چاہے درجہ بندی کرنے والا عام طور پر کچھ بھی منتخب کرے۔</string>
+    <string name="vip_empty_state">ابھی تک کوئی VIP نہیں — کوئی بھیجنے والا یا ایپ شامل کرنے کے لیے + پر تھپتھپائیں۔</string>
+    <string name="vip_entire_app">پوری ایپ</string>
+    <string name="vip_add_dialog_title">VIP شامل کریں</string>
+    <string name="vip_add_dialog_no_notifications">ابھی تک کوئی اطلاع حاصل نہیں ہوئی — VIP انہی ایپس اور بھیجنے والوں میں سے منتخب کیے جاتے ہیں جن سے آپ کو پہلے ہی اطلاعات مل چکی ہیں۔</string>
+    <string name="vip_add_dialog_app_label">ایپ</string>
+    <string name="vip_add_dialog_sender_label">بھیجنے والا (اختیاری — خالی = پوری ایپ)</string>
+
+    <!-- Paywall -->
+    <string name="paywall_subtitle">لامحدود ہسٹری، اشتہارات سے پاک اِن باکس، اور زیادہ سمارٹ درجہ بندی حاصل کریں۔</string>
+    <string name="paywall_billing_unavailable">Google Play بلنگ اس وقت دستیاب نہیں ہے۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔</string>
+    <string name="paywall_unlimited">لامحدود</string>
+    <string name="paywall_feature_history">اطلاعات کی ہسٹری</string>
+    <string name="paywall_feature_ad_free">اشتہارات سے پاک تجربہ</string>
+    <string name="paywall_feature_smart_corrections">سمارٹ تصحیحات</string>
+    <string name="paywall_feature_widget">ہوم اسکرین ویجیٹ</string>
+    <string name="paywall_feature_vip">VIP ترجیح</string>
+    <string name="paywall_feature_weekly_insights">ہفتہ وار جائزہ رپورٹ</string>
+    <string name="paywall_feature_smart_reply">سمارٹ جواب کی تجاویز</string>
+    <string name="paywall_feature_core_inbox">بنیادی اِن باکس اور اطلاعات</string>
+    <string name="paywall_column_feature">خصوصیت</string>
+    <string name="paywall_column_free">مفت</string>
+    <string name="paywall_column_pro">Pro</string>
+    <string name="paywall_included">شامل</string>
+    <string name="paywall_not_included">شامل نہیں</string>
+    <string name="paywall_price_per_period">%1$s / %2$s</string>
+    <string name="paywall_period_week">ہفتہ</string>
+    <string name="paywall_period_month">مہینہ</string>
+    <string name="paywall_period_3_months">3 مہینے</string>
+    <string name="paywall_period_6_months">6 مہینے</string>
+    <string name="paywall_period_year">سال</string>
+
+    <!-- Settings -->
+    <string name="settings_section_plan">پلان</string>
+    <string name="settings_row_plan_title">پلان</string>
+    <string name="settings_plan_subtitle_pro">Pro — لامحدود ہسٹری، کوئی اشتہار نہیں</string>
+    <string name="settings_plan_subtitle_free">مفت — %1$d دن کی ہسٹری، اشتہارات دکھائے جاتے ہیں</string>
+    <string name="settings_section_smart_corrections">سمارٹ تصحیحات</string>
+    <string name="settings_row_learn_corrections_title">میری تصحیحات سے سیکھیں</string>
+    <string name="settings_row_learn_corrections_subtitle">ملتے جلتے پیغامات کو آپ کی درست کردہ طرز میں درجہ بند کرتا ہے</string>
+    <string name="settings_section_vip_senders">VIP بھیجنے والے</string>
+    <string name="settings_row_vip_senders_title">VIP بھیجنے والے</string>
+    <string name="settings_row_vip_senders_subtitle">نشان زد بھیجنے والوں/ایپس کو ہمیشہ عمل کی طرف بھیجیں</string>
+    <string name="settings_section_weekly_insights">ہفتہ وار جائزہ</string>
+    <string name="settings_row_weekly_insights_title">ہفتہ وار جائزہ</string>
+    <string name="settings_row_weekly_insights_subtitle">حجم، قسم کے لحاظ سے تقسیم، اور پرانے انتظار والے آئٹمز</string>
+    <string name="settings_section_reminders">یاد دہانیاں</string>
+    <string name="settings_row_digest_title">روزانہ خلاصہ اور انتظار کی یاد دہانیاں</string>
+    <string name="settings_row_digest_time_title">خلاصے کا وقت</string>
+    <string name="settings_section_appearance">ظاہری شکل</string>
+    <string name="settings_row_theme_title">تھیم</string>
+    <string name="theme_system">سسٹم</string>
+    <string name="theme_light">ہلکا</string>
+    <string name="theme_dark">گہرا</string>
+    <string name="settings_row_language_title">زبان</string>
+    <string name="settings_language_system_default">سسٹم ڈیفالٹ</string>
+    <string name="settings_section_debug_tools">ڈیبگ ٹولز</string>
+    <string name="settings_row_simulate_pro_title">Pro کی نقل کریں</string>
+    <string name="settings_row_simulate_pro_subtitle">کوئی حقیقی خریداری نہیں — صرف جانچ کے لیے</string>
+    <string name="settings_row_crash_log_title">آخری کریش لاگ دیکھیں</string>
+    <string name="settings_pro_chip">PRO</string>
+
+    <!-- Weekly insights -->
+    <string name="insights_not_enough_data">ابھی کافی ڈیٹا نہیں ہے — ActionBox استعمال کرنے کے اپنے پہلے ہفتے کے بعد دوبارہ دیکھیں۔</string>
+    <string name="insights_this_week">اس ہفتے</string>
+    <string name="insights_by_category">قسم کے لحاظ سے</string>
+    <string name="insights_still_waiting">ابھی بھی انتظار میں</string>
+    <string name="insights_nothing_stale">5 دن سے زیادہ عرصے سے کچھ بھی حل طلب نہیں ہے — بہت خوب۔</string>
+
+    <plurals name="insights_notifications_captured">
+        <item quantity="one">%1$d اطلاع موصول ہوئی</item>
+        <item quantity="other">%1$d اطلاعات موصول ہوئیں</item>
+    </plurals>
+    <plurals name="insights_stale_waiting_count">
+        <item quantity="one">%1$d آئٹم ابھی بھی 5+ دن سے حل طلب ہے۔</item>
+        <item quantity="other">%1$d آئٹمز ابھی بھی 5+ دن سے حل طلب ہیں۔</item>
+    </plurals>
+    <plurals name="paywall_retention_days">
+        <item quantity="one">%1$d دن</item>
+        <item quantity="other">%1$d دن</item>
+    </plurals>
+</resources>

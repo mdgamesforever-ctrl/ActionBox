@@ -99,6 +99,14 @@ dependencies {
     androidTestImplementation(composeBom)
 
     implementation("androidx.core:core-ktx:1.13.1")
+    // Per-app language preference (Settings -> Language, see data/AppLanguage.kt) via
+    // AppCompatDelegate.setApplicationLocales() — the officially recommended API for this even
+    // in a Compose-only app with no AppCompatActivity in sight: on API 33+ it delegates to the
+    // system LocaleManager, and on API 26-32 (this app's minSdk is 26) it persists the choice
+    // itself in a private SharedPreferences file (via a ContentProvider/manifest entry this
+    // dependency merges in automatically) and re-applies it on next launch — no custom
+    // DataStore plumbing needed the way ThemeMode required.
+    implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
