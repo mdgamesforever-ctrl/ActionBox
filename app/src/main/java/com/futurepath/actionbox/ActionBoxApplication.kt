@@ -74,6 +74,15 @@ class ActionBoxApplication : Application() {
             CrashLogger.record(this, e)
         }
 
+        // Same reasoning as snooze checks above: the weekly insights chain always runs — see
+        // WeeklyInsightsWorker's doc for why gating lives in the worker itself (checking isPro
+        // before posting) rather than here.
+        try {
+            ReminderScheduler.scheduleWeeklyInsights(this)
+        } catch (e: Exception) {
+            CrashLogger.record(this, e)
+        }
+
         // Single reactive source of truth for the reminder schedule: fires once immediately
         // with whatever's currently stored (including the defaults, on first launch) to
         // (re-)establish scheduling on every process start, and again every time the user

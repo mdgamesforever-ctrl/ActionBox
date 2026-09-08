@@ -14,8 +14,18 @@ class NotificationRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).notificationDao()
     private val learningDao = AppDatabase.getInstance(context).learningPatternDao()
+    private val vipSenderDao = AppDatabase.getInstance(context).vipSenderDao()
     private val tfliteClassifier = TfliteNotificationClassifier(context.applicationContext)
     private val settingsRepository = SettingsRepository.getInstance(context)
+
+    /** Pro feature — see ui/settings/VipSendersScreen.kt. */
+    fun observeVipSenders(): Flow<List<VipSenderEntity>> = vipSenderDao.observeAll()
+
+    suspend fun addVipSender(sourceApp: String, sender: String) {
+        vipSenderDao.insert(VipSenderEntity(sourceApp = sourceApp, sender = sender, createdAt = System.currentTimeMillis()))
+    }
+
+    suspend fun removeVipSender(entity: VipSenderEntity) = vipSenderDao.delete(entity)
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
@@ -34,6 +44,10 @@ class NotificationRepository(context: Context) {
     /** Swipe-left + a duration pick in the grouped inbox — see [NotificationEntity.snoozedUntil]
      * and [com.futurepath.actionbox.reminders.SnoozeCalculator]. */
     suspend fun snooze(id: Long, untilMs: Long) = dao.setSnoozedUntil(id, untilMs)
+
+    /** The undo action on the snooze snackbar — clears the snooze immediately rather than
+     * waiting for it to elapse naturally, restoring the item to the active inbox right away. */
+    suspend fun clearSnooze(id: Long) = dao.setSnoozedUntil(id, null)
 
     /**
      * Called periodically by com.futurepath.actionbox.reminders.SnoozeWorker: clears
@@ -95,12 +109,20 @@ class NotificationRepository(context: Context) {
             }
 
             val classification = HybridClassifier.classify(sourceApp, sender, normalizedText, boosts, mlProbabilities)
+
+            // VIP escalation (Pro feature — see ui/settings/VipSendersScreen.kt): a flagged
+            // sender/app always lands in ACTION, overriding whatever the classifier decided.
+            // Confidence is bumped to 100 for an escalated item since this is a deterministic
+            // user rule, not a guess — otherwise a low classifier confidence score could still
+            // show the "needs review" treatment (see ui/components/NotificationCard.kt) on an
+            // item the user explicitly told the app to always surface.
+            val isVip = settingsRepository.isPro.first() && vipSenderDao.isVip(sourceApp, sender)
             dao.updateClassification(
                 id = result.insertedRowId,
-                state = classification.state,
+                state = if (isVip) ClassifiedState.ACTION else classification.state,
                 summary = classification.summary,
                 date = classification.date,
-                confidence = classification.confidence
+                confidence = if (isVip) 100 else classification.confidence
             )
 
             // The ML model's own top pick, recorded separately from the hybrid decision above

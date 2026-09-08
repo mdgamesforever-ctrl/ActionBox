@@ -1,13 +1,16 @@
 package com.futurepath.actionbox.ui.components
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -26,12 +29,16 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.ConfidenceTier
+import com.futurepath.actionbox.classification.SmartReplySuggester
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.effectiveState
 import java.text.DateFormat
@@ -44,7 +51,11 @@ import java.util.Date
  * to happen in one place.
  */
 @Composable
-fun NotificationCard(notification: NotificationEntity, onCorrect: (Long, ClassifiedState) -> Unit) {
+fun NotificationCard(
+    notification: NotificationEntity,
+    onCorrect: (Long, ClassifiedState) -> Unit,
+    isPro: Boolean = false
+) {
     val attentionTier = notification.confidenceScore
         ?.let { ConfidenceTier.fromScore(it) }
         ?.takeIf { it == ConfidenceTier.UNCERTAIN || it == ConfidenceTier.LOW }
@@ -81,6 +92,14 @@ fun NotificationCard(notification: NotificationEntity, onCorrect: (Long, Classif
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+            // Pro feature — see SmartReplySuggester's doc. Only for REPLY, where a quick
+            // acknowledgment is actually likely to be the whole response.
+            if (isPro && displayedState == ClassifiedState.REPLY) {
+                val suggestions = remember(notification.text) { SmartReplySuggester.suggest(notification.text) }
+                if (suggestions.isNotEmpty()) {
+                    SmartReplyRow(suggestions)
+                }
             }
             attentionTier?.let { tier ->
                 Text(
@@ -146,6 +165,36 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Tappable quick-reply suggestions (Pro feature — see [SmartReplySuggester]). v1 copies the
+ * chosen suggestion to the clipboard rather than sending a direct reply via the original
+ * notification's `RemoteInput` — the captured notification may no longer even be active in the
+ * system tray by the time it's viewed here, and copy-to-clipboard covers the "quick response"
+ * need without that added complexity.
+ */
+@Composable
+private fun SmartReplyRow(suggestions: List<String>) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        suggestions.forEach { suggestion ->
+            AssistChip(
+                onClick = {
+                    clipboardManager.setText(AnnotatedString(suggestion))
+                    Toast.makeText(context, "Copied \"$suggestion\"", Toast.LENGTH_SHORT).show()
+                },
+                label = { Text(suggestion, style = MaterialTheme.typography.labelMedium) }
             )
         }
     }

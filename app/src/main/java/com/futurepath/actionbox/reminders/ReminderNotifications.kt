@@ -25,6 +25,11 @@ object ReminderNotifications {
     const val DIGEST_CHANNEL_ID = "digest"
     const val WAITING_NUDGE_CHANNEL_ID = "waiting_nudge"
     const val SNOOZE_RETURNED_CHANNEL_ID = "snooze_returned"
+    const val WEEKLY_INSIGHTS_CHANNEL_ID = "weekly_insights"
+
+    /** Read by [MainActivity]/[com.futurepath.actionbox.ui.MainScreen] to route a tap on the
+     * weekly insights notification straight to its breakdown screen. */
+    const val INSIGHTS_EXTRA_OPEN = "com.futurepath.actionbox.reminders.EXTRA_OPEN_INSIGHTS"
 
     private const val DIGEST_NOTIFICATION_ID = 1001
     // Nudges share one notification id — a fresh notify() with the same id replaces the
@@ -33,6 +38,7 @@ object ReminderNotifications {
     private const val WAITING_NUDGE_NOTIFICATION_ID = 1002
     // Same reasoning as above: one id shared across snooze-check runs.
     private const val SNOOZE_RETURNED_NOTIFICATION_ID = 1003
+    private const val WEEKLY_INSIGHTS_NOTIFICATION_ID = 1004
 
     /** Safe to call repeatedly — createNotificationChannel is a no-op if the channel already
      * exists with the same id. Called once at app start (see ActionBoxApplication). */
@@ -53,6 +59,11 @@ object ReminderNotifications {
                 description = "Lets you know when a snoozed notification is back in your inbox."
             }
         )
+        manager.createNotificationChannel(
+            NotificationChannel(WEEKLY_INSIGHTS_CHANNEL_ID, "Weekly insights", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "A Pro-only weekly summary of what came in and what's still unresolved."
+            }
+        )
     }
 
     fun postDigest(context: Context, text: String) {
@@ -67,7 +78,25 @@ object ReminderNotifications {
         post(context, SNOOZE_RETURNED_CHANNEL_ID, SNOOZE_RETURNED_NOTIFICATION_ID, "Snooze ended", text)
     }
 
-    private fun post(context: Context, channelId: String, notificationId: Int, title: String, text: String) {
+    fun postWeeklyInsights(context: Context, text: String) {
+        post(
+            context,
+            WEEKLY_INSIGHTS_CHANNEL_ID,
+            WEEKLY_INSIGHTS_NOTIFICATION_ID,
+            "Your week in ActionBox",
+            text,
+            intentExtras = { it.putExtra(INSIGHTS_EXTRA_OPEN, true) }
+        )
+    }
+
+    private fun post(
+        context: Context,
+        channelId: String,
+        notificationId: Int,
+        title: String,
+        text: String,
+        intentExtras: (Intent) -> Unit = {}
+    ) {
         // POST_NOTIFICATIONS is a runtime permission from API 33 onward (requested when the
         // user enables the digest toggle in Settings — see SettingsScreen); on older versions
         // the manifest declaration alone is enough. Checking here too (rather than trusting the
@@ -80,10 +109,11 @@ object ReminderNotifications {
             return
         }
 
+        val intent = Intent(context, MainActivity::class.java).also(intentExtras)
         val contentIntent = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, MainActivity::class.java),
+            intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val notification = NotificationCompat.Builder(context, channelId)

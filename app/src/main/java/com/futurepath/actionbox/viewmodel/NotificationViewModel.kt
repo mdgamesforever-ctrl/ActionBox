@@ -12,10 +12,13 @@ import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.data.ThemeMode
+import com.futurepath.actionbox.data.VipSenderEntity
 import com.futurepath.actionbox.data.effectiveState
 import com.futurepath.actionbox.data.groupActiveByCategory
 import com.futurepath.actionbox.reminders.SnoozeCalculator
 import com.futurepath.actionbox.reminders.SnoozeDuration
+import com.futurepath.actionbox.reminders.WeeklyInsights
+import com.futurepath.actionbox.reminders.WeeklyInsightsCalculator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -75,6 +78,24 @@ class NotificationViewModel(
     val productDetails: StateFlow<ProductDetails?> = billingRepository.productDetails
     val billingUnavailable: StateFlow<Boolean> = billingRepository.billingUnavailable
 
+    /** Pro feature — see ui/settings/VipSendersScreen.kt. */
+    val vipSenders: StateFlow<List<VipSenderEntity>> = repository.observeVipSenders()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    /** Pro feature — see ui/insights/WeeklyInsightsScreen.kt. Shares its calculation with the
+     * weekly notification itself (see reminders/WeeklyInsightsWorker.kt) so both always agree. */
+    val weeklyInsights: StateFlow<WeeklyInsights> = notifications
+        .map { list -> WeeklyInsightsCalculator.compute(list, System.currentTimeMillis()) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = WeeklyInsightsCalculator.compute(emptyList(), System.currentTimeMillis())
+        )
+
     init {
         settingsRepository.correctionLearningEnabled
             .onEach { _correctionLearningEnabled.value = it }
@@ -121,6 +142,13 @@ class NotificationViewModel(
     fun snooze(id: Long, duration: SnoozeDuration) {
         viewModelScope.launch {
             repository.snooze(id, SnoozeCalculator.resolveUntil(duration, System.currentTimeMillis()))
+        }
+    }
+
+    /** The undo action on the swipe-left snooze snackbar. */
+    fun undoSnooze(id: Long) {
+        viewModelScope.launch {
+            repository.clearSnooze(id)
         }
     }
 
@@ -181,6 +209,19 @@ class NotificationViewModel(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             settingsRepository.setThemeMode(mode)
+        }
+    }
+
+    /** [sender] blank flags the whole [sourceApp] as VIP — see [VipSenderEntity]'s doc. */
+    fun addVipSender(sourceApp: String, sender: String) {
+        viewModelScope.launch {
+            repository.addVipSender(sourceApp, sender)
+        }
+    }
+
+    fun removeVipSender(entity: VipSenderEntity) {
+        viewModelScope.launch {
+            repository.removeVipSender(entity)
         }
     }
 

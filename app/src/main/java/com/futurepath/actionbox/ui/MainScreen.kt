@@ -39,13 +39,16 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.ui.ads.BannerAdView
+import com.futurepath.actionbox.reminders.ReminderNotifications
 import com.futurepath.actionbox.ui.feed.NotificationFeedScreen
 import com.futurepath.actionbox.ui.inbox.CategoryInboxScreen
 import com.futurepath.actionbox.ui.inbox.InboxTab
+import com.futurepath.actionbox.ui.insights.WeeklyInsightsScreen
 import com.futurepath.actionbox.ui.paywall.PaywallScreen
 import com.futurepath.actionbox.ui.search.SearchScreen
 import com.futurepath.actionbox.ui.settings.CrashLogScreen
 import com.futurepath.actionbox.ui.settings.SettingsScreen
+import com.futurepath.actionbox.ui.settings.VipSendersScreen
 import com.futurepath.actionbox.viewmodel.NotificationViewModel
 import com.futurepath.actionbox.widget.WIDGET_EXTRA_OPEN_PAYWALL
 import com.futurepath.actionbox.widget.WIDGET_EXTRA_TAB
@@ -55,6 +58,8 @@ private const val DEBUG_ROUTE = "debug"
 private const val PAYWALL_ROUTE = "paywall"
 private const val SEARCH_ROUTE = "search"
 private const val CRASH_LOG_ROUTE = "crash_log"
+private const val VIP_SENDERS_ROUTE = "vip_senders"
+private const val WEEKLY_INSIGHTS_ROUTE = "weekly_insights"
 
 /**
  * The app's primary navigation shell: bottom-nav tabs for the grouped inboxes (see [InboxTab]),
@@ -79,6 +84,8 @@ fun MainScreen(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val productDetails by viewModel.productDetails.collectAsStateWithLifecycle()
     val billingUnavailable by viewModel.billingUnavailable.collectAsStateWithLifecycle()
+    val vipSenders by viewModel.vipSenders.collectAsStateWithLifecycle()
+    val weeklyInsights by viewModel.weeklyInsights.collectAsStateWithLifecycle()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -93,6 +100,12 @@ fun MainScreen(
         when {
             intent.getBooleanExtra(WIDGET_EXTRA_OPEN_PAYWALL, false) -> {
                 navController.navigate(PAYWALL_ROUTE)
+            }
+            // A tap on the weekly insights notification (see ReminderNotifications.postWeeklyInsights)
+            // reaches here the same way a widget tap does — MainActivity's launchMode="singleTop"
+            // routes any of these into onNewIntent rather than a fresh navigation graph.
+            intent.getBooleanExtra(ReminderNotifications.INSIGHTS_EXTRA_OPEN, false) -> {
+                navController.navigate(WEEKLY_INSIGHTS_ROUTE)
             }
             intent.hasExtra(WIDGET_EXTRA_TAB) -> {
                 val tab = InboxTab.entries.find { it.name == intent.getStringExtra(WIDGET_EXTRA_TAB) }
@@ -183,7 +196,9 @@ fun MainScreen(
                         onCorrect = viewModel::correctClassification,
                         onMarkHandled = viewModel::markHandled,
                         onUndoHandled = viewModel::undoHandled,
-                        onSnooze = viewModel::snooze
+                        onSnooze = viewModel::snooze,
+                        onUndoSnooze = viewModel::undoSnooze,
+                        isPro = isPro
                     )
                 }
             }
@@ -200,11 +215,23 @@ fun MainScreen(
                     onDigestTimeChange = viewModel::setDigestTime,
                     themeMode = themeMode,
                     onThemeModeChange = viewModel::setThemeMode,
+                    onOpenVipSenders = { navController.navigate(VIP_SENDERS_ROUTE) },
+                    onOpenWeeklyInsights = { navController.navigate(WEEKLY_INSIGHTS_ROUTE) },
                     onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) }
                 )
             }
             composable(CRASH_LOG_ROUTE) {
                 CrashLogScreen()
+            }
+            composable(VIP_SENDERS_ROUTE) {
+                VipSendersScreen(
+                    vipSenders = vipSenders,
+                    onAdd = viewModel::addVipSender,
+                    onRemove = viewModel::removeVipSender
+                )
+            }
+            composable(WEEKLY_INSIGHTS_ROUTE) {
+                WeeklyInsightsScreen(insights = weeklyInsights)
             }
             composable(PAYWALL_ROUTE) {
                 PaywallScreen(
@@ -224,7 +251,8 @@ fun MainScreen(
             composable(SEARCH_ROUTE) {
                 SearchScreen(
                     notifications = notifications,
-                    onCorrect = viewModel::correctClassification
+                    onCorrect = viewModel::correctClassification,
+                    isPro = isPro
                 )
             }
         }
@@ -241,6 +269,8 @@ private fun TopBarTitle(currentRoute: String?, currentTab: InboxTab?, onOpenDebu
         currentRoute == DEBUG_ROUTE -> "Debug Feed"
         currentRoute == SEARCH_ROUTE -> "Search"
         currentRoute == CRASH_LOG_ROUTE -> "Crash Log"
+        currentRoute == VIP_SENDERS_ROUTE -> "VIP Senders"
+        currentRoute == WEEKLY_INSIGHTS_ROUTE -> "Weekly Insights"
         else -> "ActionBox"
     }
     Text(

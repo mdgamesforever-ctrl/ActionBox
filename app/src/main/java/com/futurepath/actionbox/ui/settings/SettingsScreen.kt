@@ -62,6 +62,8 @@ fun SettingsScreen(
     onDigestTimeChange: (DigestTime) -> Unit,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onOpenVipSenders: () -> Unit,
+    onOpenWeeklyInsights: () -> Unit,
     onViewCrashLogClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -121,6 +123,36 @@ fun SettingsScreen(
                 if (!isPro) onUpgradeClick() else onCorrectionLearningChange(wantsOn)
             }
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader("VIP senders")
+        Text(
+            text = "Flag specific senders or apps as VIP — their notifications always land in " +
+                "Action, no matter what the classifier would normally pick.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = { if (!isPro) onUpgradeClick() else onOpenVipSenders() }) {
+            Text(if (isPro) "Manage VIP senders" else "Requires Pro — tap to upgrade")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader("Weekly insights")
+        Text(
+            text = "A Pro-only weekly summary — how much came in, the breakdown by category, " +
+                "and anything still WAITING after 5+ days.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = { if (!isPro) onUpgradeClick() else onOpenWeeklyInsights() }) {
+            Text(if (isPro) "View this week's insights" else "Requires Pro — tap to upgrade")
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         HorizontalDivider()

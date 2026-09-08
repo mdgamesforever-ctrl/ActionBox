@@ -7,8 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 @Database(
-    entities = [NotificationEntity::class, LearningPatternEntity::class],
-    version = 14,
+    entities = [NotificationEntity::class, LearningPatternEntity::class, VipSenderEntity::class],
+    version = 15,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -17,6 +17,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun notificationDao(): NotificationDao
 
     abstract fun learningPatternDao(): LearningPatternDao
+
+    abstract fun vipSenderDao(): VipSenderDao
 
     companion object {
         @Volatile

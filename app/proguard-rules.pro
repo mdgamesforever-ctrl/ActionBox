@@ -16,6 +16,9 @@
 -keep class com.futurepath.actionbox.reminders.SnoozeWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+-keep class com.futurepath.actionbox.reminders.WeeklyInsightsWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
 
 # ---- Room (data/AppDatabase.kt, NotificationEntity.kt, LearningPatternEntity.kt, *Dao.kt) ----
 # Room's own generated code (via KSP, compiled alongside these classes) accesses entity fields
@@ -25,9 +28,11 @@
 # an unnecessary keep rule.
 -keep class com.futurepath.actionbox.data.NotificationEntity { *; }
 -keep class com.futurepath.actionbox.data.LearningPatternEntity { *; }
+-keep class com.futurepath.actionbox.data.VipSenderEntity { *; }
 -keep class com.futurepath.actionbox.data.AppDatabase { *; }
 -keep interface com.futurepath.actionbox.data.NotificationDao { *; }
 -keep interface com.futurepath.actionbox.data.LearningPatternDao { *; }
+-keep interface com.futurepath.actionbox.data.VipSenderDao { *; }
 -keep class com.futurepath.actionbox.data.Converters { *; }
 
 # ClassifiedState.name() is stored as the literal column value in Room (see Converters) and

@@ -30,16 +30,22 @@ import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.reminders.SnoozeCalculator
 import com.futurepath.actionbox.reminders.SnoozeDuration
 import com.futurepath.actionbox.ui.components.SwipeableNotificationCard
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * One tab's worth of the grouped inbox — every captured notification whose effective state
  * (see NotificationViewModel.itemsByCategory) falls in [tab]'s [InboxTab.states]. Sorted newest
  * first, same as the debug feed, since [items] is already that order coming out of Room.
  *
- * Each row is wrapped in [SwipeableNotificationCard]: swipe right marks it handled (with an
- * "Undo" snackbar, since swipes are easy to trigger by accident), swipe left opens
- * [SnoozeDurationDialog].
+ * Each row is wrapped in [SwipeableNotificationCard]: swipe right marks it handled, swipe left
+ * opens [SnoozeDurationDialog] — both actions get an "Undo" snackbar (see [showUndoSnackbar]),
+ * since a swipe is easy to trigger by accident and neither one touches the item's category/
+ * position, so undoing is just clearing the [NotificationEntity.handledAt]/[NotificationEntity.snoozedUntil]
+ * timestamp that hid it — the item reappears exactly where its timestamp naturally sorts it,
+ * with no separate "restore state" bookkeeping needed.
  */
 @Composable
 fun CategoryInboxScreen(
@@ -48,7 +54,9 @@ fun CategoryInboxScreen(
     onCorrect: (id: Long, newState: ClassifiedState) -> Unit,
     onMarkHandled: (id: Long) -> Unit,
     onUndoHandled: (id: Long) -> Unit,
-    onSnooze: (id: Long, duration: SnoozeDuration) -> Unit
+    onSnooze: (id: Long, duration: SnoozeDuration) -> Unit,
+    onUndoSnooze: (id: Long) -> Unit,
+    isPro: Boolean = false
 ) {
     val items = tab.states.flatMap { itemsByCategory[it].orEmpty() }
         .sortedByDescending { it.timestamp }
@@ -81,17 +89,11 @@ fun CategoryInboxScreen(
                     SwipeableNotificationCard(
                         notification = notification,
                         onCorrect = onCorrect,
+                        isPro = isPro,
                         onMarkHandled = { id ->
                             onMarkHandled(id)
-                            scope.launch {
-                                val result = snackbarHostState.showSnackbar(
-                                    message = "Marked handled",
-                                    actionLabel = "Undo",
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (result == SnackbarResult.ActionPerformed) {
-                                    onUndoHandled(id)
-                                }
+                            showUndoSnackbar(scope, snackbarHostState, "Marked as handled") {
+                                onUndoHandled(id)
                             }
                         },
                         onOpenSnooze = { id -> snoozeTargetId = id }
@@ -107,11 +109,50 @@ fun CategoryInboxScreen(
         SnoozeDurationDialog(
             onSelect = { duration ->
                 onSnooze(id, duration)
+                showUndoSnackbar(scope, snackbarHostState, "Snoozed until ${formatSnoozeUntil(duration)}") {
+                    onUndoSnooze(id)
+                }
                 snoozeTargetId = null
             },
             onDismiss = { snoozeTargetId = null }
         )
     }
+}
+
+/**
+ * Shows a single "[message]" + Undo snackbar, calling [onUndo] if the user taps it before it
+ * auto-dismisses (~4s, [SnackbarDuration.Short]). Dismisses whatever snackbar is currently
+ * showing first — rather than letting [SnackbarHostState.showSnackbar]'s default queuing behavior
+ * queue this one up behind it — so swiping a second item before the first snackbar times out
+ * replaces it immediately with the latest action's undo option instead of stacking/delaying it.
+ */
+private fun showUndoSnackbar(
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    message: String,
+    onUndo: () -> Unit
+) {
+    scope.launch {
+        snackbarHostState.currentSnackbarData?.dismiss()
+        val result = snackbarHostState.showSnackbar(
+            message = message,
+            actionLabel = "Undo",
+            duration = SnackbarDuration.Short
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            onUndo()
+        }
+    }
+}
+
+/** "Snoozed until [time]" display text for the undo snackbar — computed independently from
+ * whatever timestamp [com.futurepath.actionbox.viewmodel.NotificationViewModel.snooze] actually
+ * stores (see [SnoozeCalculator], a pure function of the duration and current time), since this
+ * is purely for display and the two calls happening a few milliseconds apart makes no visible
+ * difference once formatted. */
+private fun formatSnoozeUntil(duration: SnoozeDuration): String {
+    val untilMs = SnoozeCalculator.resolveUntil(duration, System.currentTimeMillis())
+    return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(untilMs))
 }
 
 @Composable

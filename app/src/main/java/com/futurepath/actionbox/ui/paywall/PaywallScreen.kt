@@ -146,6 +146,9 @@ private fun FeatureComparisonTable() {
         ComparisonRow(feature = "Ad-free experience", freeIncluded = false),
         ComparisonRow(feature = "Smart corrections", freeIncluded = false),
         ComparisonRow(feature = "Home screen widget", freeIncluded = false),
+        ComparisonRow(feature = "VIP escalation", freeIncluded = false),
+        ComparisonRow(feature = "Weekly insights digest", freeIncluded = false),
+        ComparisonRow(feature = "Smart reply suggestions", freeIncluded = false),
         ComparisonRow(feature = "Core inbox & notifications", freeIncluded = true)
     )
 

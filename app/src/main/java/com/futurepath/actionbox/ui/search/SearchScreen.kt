@@ -34,7 +34,8 @@ import com.futurepath.actionbox.ui.components.NotificationCard
 @Composable
 fun SearchScreen(
     notifications: List<NotificationEntity>,
-    onCorrect: (id: Long, newState: ClassifiedState) -> Unit
+    onCorrect: (id: Long, newState: ClassifiedState) -> Unit,
+    isPro: Boolean = false
 ) {
     var query by remember { mutableStateOf("") }
     val results = remember(notifications, query) { NotificationSearch.search(notifications, query) }
@@ -58,7 +59,7 @@ fun SearchScreen(
             results.isEmpty() -> EmptyState("No matches for \"$query\".")
             else -> LazyColumn {
                 items(results, key = { it.id }) { notification ->
-                    NotificationCard(notification, onCorrect)
+                    NotificationCard(notification, onCorrect, isPro)
                 }
             }
         }

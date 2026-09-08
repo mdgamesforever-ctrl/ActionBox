@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.futurepath.actionbox.data.DigestTime
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -24,6 +25,12 @@ object ReminderScheduler {
     private const val DIGEST_WORK_NAME = "digest_work"
     private const val WAITING_NUDGE_WORK_NAME = "waiting_nudge_work"
     private const val SNOOZE_CHECK_WORK_NAME = "snooze_check_work"
+    private const val WEEKLY_INSIGHTS_WORK_NAME = "weekly_insights_work"
+
+    // Sunday evening, matching the feature's own spec ("e.g. Sunday evening") — a fixed time
+    // rather than a user-configurable one like the daily digest, since this is a single weekly
+    // touchpoint rather than something worth its own settings-screen picker.
+    private val WEEKLY_INSIGHTS_TIME = DigestTime(18, 0)
 
     // How often to check for newly-overdue WAITING items. Doesn't need to be precise the way
     // the digest's wall-clock time does — just frequent enough that a nudge doesn't lag its
@@ -61,6 +68,19 @@ object ReminderScheduler {
 
     fun cancelSnoozeChecks(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(SNOOZE_CHECK_WORK_NAME)
+    }
+
+    /**
+     * Unconditional and Pro-status-independent for the same reason [scheduleSnoozeChecks] is —
+     * [WeeklyInsightsWorker] itself checks isPro before posting anything, and keeps the weekly
+     * chain alive regardless so a later upgrade to Pro doesn't need a fresh schedule to start
+     * getting the digest. Self-rescheduling one-shot chain, same pattern as [scheduleDigest].
+     */
+    fun scheduleWeeklyInsights(context: Context) {
+        val request = OneTimeWorkRequestBuilder<WeeklyInsightsWorker>()
+            .setInitialDelay(delayUntilNextSunday(WEEKLY_INSIGHTS_TIME).toMillis(), TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(WEEKLY_INSIGHTS_WORK_NAME, ExistingWorkPolicy.REPLACE, request)
     }
 
     /**
@@ -103,6 +123,15 @@ object ReminderScheduler {
         val now = LocalDateTime.now(zone)
         var target = now.toLocalDate().atTime(LocalTime.of(time.hour, time.minute))
         if (!target.isAfter(now)) target = target.plusDays(1)
+        return Duration.between(now, target)
+    }
+
+    private fun delayUntilNextSunday(time: DigestTime, zone: ZoneId = ZoneId.systemDefault()): Duration {
+        val now = LocalDateTime.now(zone)
+        var target = now.toLocalDate().atTime(LocalTime.of(time.hour, time.minute))
+        while (target.dayOfWeek != DayOfWeek.SUNDAY || !target.isAfter(now)) {
+            target = target.plusDays(1)
+        }
         return Duration.between(now, target)
     }
 }
