@@ -58,7 +58,8 @@ fun SettingsScreen(
     digestsEnabled: Boolean,
     onDigestsEnabledChange: (Boolean) -> Unit,
     digestTime: DigestTime,
-    onDigestTimeChange: (DigestTime) -> Unit
+    onDigestTimeChange: (DigestTime) -> Unit,
+    onViewCrashLogClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -161,6 +162,10 @@ fun SettingsScreen(
                 checked = isPro,
                 onCheckedChange = onDebugProOverrideChange
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onViewCrashLogClick) {
+                Text("View last crash log")
+            }
         }
     }
 }

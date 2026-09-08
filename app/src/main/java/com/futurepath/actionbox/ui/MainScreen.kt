@@ -44,6 +44,7 @@ import com.futurepath.actionbox.ui.inbox.CategoryInboxScreen
 import com.futurepath.actionbox.ui.inbox.InboxTab
 import com.futurepath.actionbox.ui.paywall.PaywallScreen
 import com.futurepath.actionbox.ui.search.SearchScreen
+import com.futurepath.actionbox.ui.settings.CrashLogScreen
 import com.futurepath.actionbox.ui.settings.SettingsScreen
 import com.futurepath.actionbox.viewmodel.NotificationViewModel
 import com.futurepath.actionbox.widget.WIDGET_EXTRA_OPEN_PAYWALL
@@ -53,6 +54,7 @@ private const val SETTINGS_ROUTE = "settings"
 private const val DEBUG_ROUTE = "debug"
 private const val PAYWALL_ROUTE = "paywall"
 private const val SEARCH_ROUTE = "search"
+private const val CRASH_LOG_ROUTE = "crash_log"
 
 /**
  * The app's primary navigation shell: bottom-nav tabs for the grouped inboxes (see [InboxTab]),
@@ -194,8 +196,12 @@ fun MainScreen(
                     digestsEnabled = digestsEnabled,
                     onDigestsEnabledChange = viewModel::setDigestsEnabled,
                     digestTime = digestTime,
-                    onDigestTimeChange = viewModel::setDigestTime
+                    onDigestTimeChange = viewModel::setDigestTime,
+                    onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) }
                 )
+            }
+            composable(CRASH_LOG_ROUTE) {
+                CrashLogScreen()
             }
             composable(PAYWALL_ROUTE) {
                 PaywallScreen(
@@ -230,6 +236,7 @@ private fun TopBarTitle(currentRoute: String?, currentTab: InboxTab?, onOpenDebu
         currentRoute == PAYWALL_ROUTE -> "Upgrade to Pro"
         currentRoute == DEBUG_ROUTE -> "Debug Feed"
         currentRoute == SEARCH_ROUTE -> "Search"
+        currentRoute == CRASH_LOG_ROUTE -> "Crash Log"
         else -> "ActionBox"
     }
     Text(

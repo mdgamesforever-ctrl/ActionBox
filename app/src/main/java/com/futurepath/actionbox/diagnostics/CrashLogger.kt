@@ -55,4 +55,21 @@ object CrashLogger {
             Log.e(TAG, "Failed to write crash log file", writeFailure)
         }
     }
+
+    /**
+     * Reads back the persisted crash file directly via the app's own file access — no adb
+     * needed — for [com.futurepath.actionbox.ui.settings.CrashLogScreen]. Null if nothing has
+     * been recorded (no crash yet since install, or since app data was last cleared) or if the
+     * file can't be read for some reason.
+     */
+    fun readLastCrash(context: Context): String? {
+        val file = File(context.applicationContext.filesDir, CRASH_LOG_FILE_NAME)
+        if (!file.exists()) return null
+        return try {
+            file.readText()
+        } catch (readFailure: Exception) {
+            Log.e(TAG, "Failed to read crash log file", readFailure)
+            null
+        }
+    }
 }
