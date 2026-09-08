@@ -15,6 +15,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.fillMaxSize
+import androidx.compose.ui.unit.dp
 import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -117,7 +118,7 @@ private fun UpgradePlaceholder(context: Context) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(BACKGROUND_COLOR)
-            .padding(12)
+            .padding(12.dp)
             .clickable(actionStartActivity(paywallIntent(context))),
         verticalAlignment = Alignment.Vertical.CenterVertically,
         horizontalAlignment = Alignment.Horizontal.CenterHorizontally
@@ -135,7 +136,7 @@ private fun WidgetContent(context: Context, counts: Map<InboxTab, Int>) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(BACKGROUND_COLOR)
-            .padding(12)
+            .padding(12.dp)
             // Tapping anywhere that isn't one of the category rows below opens the main inbox —
             // Glance/RemoteViews dispatch a tap to the innermost clickable region under it, so
             // each row's own clickable() modifier (below) takes priority over this one.
@@ -148,7 +149,7 @@ private fun WidgetContent(context: Context, counts: Map<InboxTab, Int>) {
                 text = "${counts[tab] ?: 0} ${context.getString(tab.labelRes)}",
                 style = TextStyle(color = ColorProvider(Color.WHITE), fontWeight = FontWeight.Medium),
                 modifier = GlanceModifier
-                    .padding(4)
+                    .padding(4.dp)
                     .clickable(actionStartActivity(tabIntent(context, tab)))
             )
         }
@@ -164,7 +165,7 @@ private fun WidgetErrorState(context: Context) {
         modifier = GlanceModifier
             .fillMaxSize()
             .background(BACKGROUND_COLOR)
-            .padding(12)
+            .padding(12.dp)
             .clickable(actionStartActivity(mainIntent(context))),
         contentAlignment = Alignment.Center
     ) {
