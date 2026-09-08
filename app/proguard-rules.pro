@@ -53,6 +53,19 @@
 -keep class com.android.billingclient.api.** { *; }
 -dontwarn com.android.billingclient.api.**
 
+# ---- Home screen widget (widget/ActionBoxWidget.kt, widget/ActionBoxWidgetReceiver.kt) ----
+# ActionBoxWidgetReceiver is declared in AndroidManifest.xml, which AGP already auto-keeps via
+# its generated manifest-component rules — kept explicitly here too since Glance's own AppWidget
+# framework resolves the receiver<->GlanceAppWidget pairing at runtime (via the manifest's
+# provider metadata, not a direct code reference back to the receiver), the same reasoning as
+# CapturedNotificationListenerService/BootCompletedReceiver below. ActionBoxWidget itself is
+# reached by ordinary code references (ActionBoxWidgetReceiver.glanceAppWidget,
+# ActionBoxApplication's updateAll() call) so R8 would keep it anyway, but it's kept explicitly
+# too since Glance also constructs/matches widget instances through its own reflection-based
+# session/composition machinery, not only the direct calls visible to R8's reachability analysis.
+-keep class com.futurepath.actionbox.widget.ActionBoxWidget { *; }
+-keep class com.futurepath.actionbox.widget.ActionBoxWidgetReceiver { *; }
+
 # ---- NotificationListenerService / BroadcastReceiver ----
 # Both are declared in AndroidManifest.xml, which AGP already auto-keeps via its generated
 # manifest-component rules — kept explicitly here too since CapturedNotificationListenerService
