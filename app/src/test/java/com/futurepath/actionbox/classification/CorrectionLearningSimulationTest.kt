@@ -20,8 +20,13 @@ class CorrectionLearningSimulationTest {
     // wording, but which the user has repeatedly told ActionBox are really just FYI notices.
     private val sourceApp = "com.fake.landlordportal"
     private val sender = "Landlord Portal"
-    private val firstMessage = "Please confirm you received this month's rent receipt."
-    private val secondMessage = "Please confirm you received this month's utility receipt."
+    // Deliberately no "please"/"kindly"-style REQUEST_MARKER here — this simulation is about
+    // the correction-learning boost overriding the rule engine's own ACTION read, and a request
+    // marker on top of a directed "confirm" verb would push ACTION's own score up enough to
+    // outweigh SENDER_BOOST on its own (see NotificationClassifier's REQUEST_MARKERS/
+    // ACTION_REQUEST_MARKER_BONUS), which would demonstrate a different thing entirely.
+    private val firstMessage = "Confirm you received this month's rent receipt."
+    private val secondMessage = "Confirm you received this month's utility receipt."
 
     @Test
     fun `before any corrections, the classifier reads this sender's message as ACTION on its own signal`() {

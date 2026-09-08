@@ -76,7 +76,8 @@ object NotificationClassifier {
 
         val bankingTemplateHit = isBankingTransactionTemplate(lowerText)
         val bankingTemplateHasDueLanguage = bankingTemplateHit &&
-            (DUE_PATTERNS.any { it.containsMatchIn(lowerText) } || BY_DEADLINE_PATTERN.containsMatchIn(lowerText))
+            (DUE_PATTERNS.any { it.containsMatchIn(lowerText) } || BY_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
+                BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText))
         val bankingFyiBonus = if (bankingTemplateHit && !bankingTemplateHasDueLanguage) BANKING_TEMPLATE_WEIGHT else 0
         val bankingDeadlineBonus = if (bankingTemplateHasDueLanguage) BANKING_TEMPLATE_WEIGHT else 0
 
@@ -161,8 +162,16 @@ object NotificationClassifier {
     private fun isWeakStandaloneDeadlineOnly(lowerText: String, baseScores: Map<ClassifiedState, Int>): Boolean {
         val deadlineScore = baseScores[ClassifiedState.DEADLINE] ?: 0
         if (deadlineScore <= 0) return false
+        // BARE_BEFORE_PATTERN counts as "real" due language here even though scoreDeadline
+        // itself only credits it weakly (see hasBareBefore there) — this check only fires when
+        // EVERY OTHER category also scored exactly 0, so a bare "before" is never what lets a
+        // false deadline win a genuine competing signal; it just keeps a lone "3 days left
+        // before your subscription lapses."-style message (no other category support, no day
+        // name either) from being zeroed to FYI purely because "before" isn't the day-name
+        // pattern this safeguard was built for.
         val hasDueLanguage = DUE_PATTERNS.any { it.containsMatchIn(lowerText) } ||
-            BY_DEADLINE_PATTERN.containsMatchIn(lowerText)
+            BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
+            BARE_BEFORE_PATTERN.containsMatchIn(lowerText)
         if (hasDueLanguage) return false
         return baseScores.filterKeys { it != ClassifiedState.DEADLINE }.values.all { it == 0 }
     }
@@ -357,11 +366,22 @@ object NotificationClassifier {
         // deadline" still correctly scores DEADLINE via DUE_PATTERNS.
         val deliveryCommitment = DEADLINE_SUPPRESSED_BY_DELIVERY_COMMITMENT.containsMatchIn(lowerText)
         val byDeadlineHit = !deliveryCommitment && BY_DEADLINE_PATTERN.containsMatchIn(lowerText)
-        // Tracked separately from byDeadlineHit: an explicit due/expiry WORD ("due", "cutoff",
-        // "expires"...) is a much stronger, less generic signal than the bare "by <time>"
-        // trigger — see below for why that distinction matters for the combo-date broadening.
+        val beforeDeadlineHit = !deliveryCommitment && BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText)
+        // A bare "before" with no anchored day/date/time (see BEFORE_DEADLINE_PATTERN for the
+        // anchored case) is an ordinary subordinating conjunction — "clean the desk before you
+        // leave", "double check the numbers before sending" — that appears constantly in
+        // ordinary ACTION-request sentences with no deadline intent at all. Tracked separately
+        // so it falls through to the same weak STANDALONE_DATE_WEIGHT-level treatment as a bare
+        // day-name mention below (see the dueMatches==0 branch), rather than the full DUE_WEIGHT
+        // credit it used to get unconditionally, which tied or beat a genuine ACTION/WAITING
+        // signal on exactly this class of sentence.
+        val hasBareBefore = !beforeDeadlineHit && BARE_BEFORE_PATTERN.containsMatchIn(lowerText)
+        // Tracked separately from byDeadlineHit/beforeDeadlineHit: an explicit due/expiry WORD
+        // ("due", "cutoff", "expires"...) is a much stronger, less generic signal than the bare
+        // "by/before <time>" trigger — see below for why that distinction matters for the
+        // combo-date broadening.
         val explicitDueWordCount = DUE_PATTERNS.count { it.containsMatchIn(lowerText) }
-        val dueMatches = explicitDueWordCount + (if (byDeadlineHit) 1 else 0)
+        val dueMatches = explicitDueWordCount + (if (byDeadlineHit) 1 else 0) + (if (beforeDeadlineHit) 1 else 0)
 
         if (dueMatches == 0) {
             // A bare day name/relative phrase with no due/expiry language is a weak signal
@@ -375,7 +395,8 @@ object NotificationClassifier {
             // broader one below — "today"/"tomorrow"/time-of-day are far too common in ordinary
             // non-deadline sentences to trust as a standalone trigger on their own.
             val dateMatches = DEADLINE_STANDALONE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
-            return dateMatches * STANDALONE_DATE_WEIGHT
+            val bareBeforeWeight = if (hasBareBefore) STANDALONE_DATE_WEIGHT else 0
+            return dateMatches * STANDALONE_DATE_WEIGHT + bareBeforeWeight
         }
 
         // The broader combo date-pattern set (calendar dates, "today"/"tomorrow"/"tonight", a
@@ -423,6 +444,20 @@ object NotificationClassifier {
         }
         if (verbHit && REQUEST_MARKERS.any { it.containsMatchIn(lowerText) }) {
             total += ACTION_REQUEST_MARKER_BONUS
+            // A request explicitly directed at the recipient ("can you...", "kindly...",
+            // "please...", "would you mind...") is unambiguously an action ask even when it
+            // also names a deadline ("...by Friday") — unlike a BARE imperative with an
+            // attached day-name (the large-scale validation report's documented, accepted
+            // ACTION/DEADLINE overlap — see scoreDeadline's COMBO_BONUS), a genuine
+            // question/politeness marker never doubles as an automated deadline announcement's
+            // phrasing. Sized so the combined ACTION score clears DEADLINE's own "verb + by/
+            // before <date>" combo score rather than losing to it the way a bare imperative
+            // does.
+            if (BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
+                DUE_PATTERNS.any { it.containsMatchIn(lowerText) }
+            ) {
+                total += ACTION_REQUEST_WITH_DEADLINE_BONUS
+            }
         }
         return total
     }
@@ -464,6 +499,10 @@ object NotificationClassifier {
     private const val ACTION_VERB_WEIGHT = 2
     private const val ACTION_DIRECTED_BONUS = 1
     private const val ACTION_REQUEST_MARKER_BONUS = 2
+    // See scoreAction's doc: only added on top of ACTION_REQUEST_MARKER_BONUS, and only when a
+    // deadline-shaped clause is ALSO present, so it can't affect any request that doesn't
+    // already compete against DEADLINE's combo score.
+    private const val ACTION_REQUEST_WITH_DEADLINE_BONUS = 4
     private const val STRENGTH_CAP = 9f // was 8 pre-Phase 5; see computeConfidence's doc
     private const val MARGIN_WEIGHT = 0.6f
     private const val STRENGTH_WEIGHT = 0.4f
@@ -636,36 +675,55 @@ object NotificationClassifier {
         "installation complete", "update installed"
     )
 
+    // "before" is deliberately NOT included here — unlike "due"/"expires"/"deadline", it's an
+    // ordinary subordinating conjunction ("do X before Y happens") that appears constantly in
+    // non-deadline sentences with no due/expiry meaning at all. It only counts as a due/expiry
+    // signal when actually anchored to a day/date/time (BEFORE_DEADLINE_PATTERN below, mirroring
+    // BY_DEADLINE_PATTERN); an unanchored "before" gets the weaker, standalone-level treatment
+    // in scoreDeadline instead (see hasBareBefore there).
     private val DUE_PATTERNS = phrases(
-        "due", "expires", "expiring", "deadline", "before",
+        "due", "expires", "expiring", "deadline",
         "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
     )
 
-    // "before" (like "by") is too generic on its own to unlock DEADLINE_COMBO_DATE_PATTERNS'
-    // broader bonus — both show up constantly in the accepted ACTION/DEADLINE overlap cluster
-    // ("submit the form before Friday", "complete the form by 9am"/"...before 9am" once "b4"
-    // normalizes to "before"). Everything else in DUE_PATTERNS is an unambiguous due/expiry
-    // word that genuinely warrants trusting a broader date match alongside it — see
-    // scoreDeadline's dateMatches gate.
+    // Same list as DUE_PATTERNS now that "before" has its own anchored/unanchored handling —
+    // kept as a separate named list since scoreDeadline's dateMatches gate documents its intent
+    // in terms of "the strong due/expiry words", independent of DUE_PATTERNS' own membership.
     private val STRONG_DUE_PATTERNS = phrases(
         "due", "expires", "expiring", "deadline",
         "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
     )
 
-    // "by" alone is too generic (fires on "by tomorrow morning", "by the way", etc.) — only
-    // counts as a deadline signal when it actually precedes a day/date/time.
-    private val BY_DEADLINE_PATTERN = Regex(
-        "\\bby\\s+(?:the\\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|" +
+    // Shared date/day/time alternation anchoring both BY_DEADLINE_PATTERN and
+    // BEFORE_DEADLINE_PATTERN — "by"/"before" alone are both too generic (fire on "by the way",
+    // "before you know it", etc.) to count as a deadline signal without actually precede a
+    // day/date/time.
+    private const val DEADLINE_ANCHOR_DATES =
+        "(?:the\\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|" +
             "today|tomorrow|tonight|midnight|noon|end of (?:the )?month|end of (?:the )?week|next week|" +
             "january|february|march|april|may|june|july|august|september|october|november|december|" +
-            "\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}/\\d{1,2}|\\d{1,2}(?:st|nd|rd|th))",
-        RegexOption.IGNORE_CASE
-    )
+            "\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}/\\d{1,2}|\\d{1,2}(?:st|nd|rd|th))"
+
+    private val BY_DEADLINE_PATTERN = Regex("\\bby\\s+$DEADLINE_ANCHOR_DATES", RegexOption.IGNORE_CASE)
+
+    // The "before" counterpart to BY_DEADLINE_PATTERN — see DUE_PATTERNS' doc for why bare
+    // "before" (no anchored date) is handled separately and more weakly in scoreDeadline.
+    private val BEFORE_DEADLINE_PATTERN = Regex("\\bbefore\\s+$DEADLINE_ANCHOR_DATES", RegexOption.IGNORE_CASE)
+
+    // The weak, unanchored form of "before" — see scoreDeadline's hasBareBefore.
+    private val BARE_BEFORE_PATTERN = Regex("\\bbefore\\b")
 
     // "should arrive by tonight" / "expect it by 5pm" — see scoreDeadline's doc for why a
     // delivery-commitment phrase makes the following "by <time>" not a real deadline signal.
+    // Broadened to cover the equivalent WAITING-style follow-up commitment ("Rest assured, our
+    // team is on it and will follow up by Tuesday.", "will have something for you by tonight")
+    // — a sender's own promise to act/respond by a given time reads as a status update, not a
+    // deadline the RECIPIENT must meet, the same distinction the delivery-commitment case
+    // already draws; without this, WAITING's own strong multi-pattern signal ("on it" + "will
+    // follow up") was losing outright to the "by <day>" combo bonus below.
     private val DEADLINE_SUPPRESSED_BY_DELIVERY_COMMITMENT = Regex(
-        "\\b(?:should (?:arrive|expect)|expect (?:it|the|your|this|that))\\b"
+        "\\b(?:should (?:arrive|expect)|expect (?:it|the|your|this|that|news|an update|a reply|a response)|" +
+            "will (?:follow up|get back|update|respond)|will have (?:something|an update|news))\\b"
     )
 
     // Day names and relative time phrases count as deadline signals ON THEIR OWN, per spec,
@@ -705,26 +763,77 @@ object NotificationClassifier {
 
     private data class ActionVerb(val word: String, val bare: Regex, val directed: Regex)
 
+    // Default inflection suffix for an ACTION_VERBS word — "upload"/"uploading"/"uploaded"/
+    // "uploads" should all count as the same request verb; the ORIGINAL bare-word-only regex
+    // matched none of the inflected forms at all (large-scale validation: "Would you mind
+    // uploading the presentation before the meeting?" scored zero ACTION signal purely because
+    // "uploading" never matched "\\bupload\\b"). A handful of verbs override this default below
+    // because their inflected form collides with a common NON-imperative usage elsewhere.
+    private const val DEFAULT_VERB_SUFFIX = "(?:s|ed|ing)?"
+
+    private val ACTION_VERB_SUFFIX_OVERRIDES: Map<String, String> = mapOf(
+        // "renewed" is almost always a completed-status FYI statement ("Your subscription
+        // renewed automatically."), never a request — excludes "ed" so only the imperative
+        // present-tense/gerund forms count.
+        "renew" to "(?:s|ing)?",
+        // "texts"/"prints" as PLURAL NOUNS collide with unrelated spam-template text ("stop
+        // texts", "Make your prints beautiful") — excludes "s"; "text" also excludes "ed" since
+        // there's no real-world upside to matching it and it keeps the verb's footprint minimal.
+        "text" to "(?:ing)?",
+        "print" to "(?:ing|ed)?",
+        // "order confirmed"/"booking confirmed"/"your appointment is confirmed" are completion-
+        // STATUS statements (FYI), never an imperative — "confirmed" (past tense) essentially
+        // never occurs as a request. Excludes "ed"/"ing" entirely, keeping only bare present-
+        // tense "confirm(s)".
+        "confirm" to "(?:s)?",
+        // "Booking confirmed for Tuesday." / "table booked for half eight" — "booking"/"booked"
+        // are FYI status-noun/status-verb usages, not the gerund/past tense of an imperative
+        // "book the flights" request. Bare present-tense only, same reasoning as "confirm".
+        "book" to "(?:s)?",
+        // "Your review has been submitted" / "New device signed in to your account" / "Your
+        // document has been signed by all parties" / "Class canceled today." are all
+        // completion-status FYI statements, not requests — same reasoning as confirm/book
+        // above. Excludes "ed" for all three.
+        "submit" to "(?:s|ing)?",
+        "sign" to "(?:s|ing)?",
+        "cancel" to "(?:s|ing)?"
+    )
+
     private val ACTION_VERBS = listOf(
         "send", "bring", "upload", "finish", "buy", "pay", "call", "pick up", "check",
-        "submit", "sign", "review", "forward", "complete", "book", "cancel", "confirm"
+        "submit", "sign", "review", "forward", "complete", "book", "cancel", "confirm",
+        // Added from large-scale validation's ACTION-miss analysis — common real-world
+        // request/task verbs with no prior coverage at all (see the session report for the
+        // per-verb collision check against every existing corpus before inclusion; verbs with
+        // a real collision risk — e.g. "attach"/"draft"/"fix"/"grab" all collide with genuine
+        // FYI/WAITING usage elsewhere in the corpora — were deliberately left out).
+        "reboot", "water", "escalate", "handle", "approve", "authorize", "lock", "text",
+        "renew", "arrange", "take out", "clean up"
     ).map { verb ->
-        val escaped = Regex.escape(verb)
+        val suffix = ACTION_VERB_SUFFIX_OVERRIDES[verb] ?: DEFAULT_VERB_SUFFIX
+        val parts = verb.split(" ")
+        // Two-word verbs ("pick up", "take out", "clean up") inflect on the FIRST word only —
+        // "picking up"/"cleaned up", never "pick uping" — the trailing particle stays fixed.
+        val bareText = if (parts.size == 2) {
+            "\\b${Regex.escape(parts[0])}$suffix\\s+${Regex.escape(parts[1])}\\b"
+        } else {
+            "\\b${Regex.escape(verb)}$suffix\\b"
+        }
         ActionVerb(
             word = verb,
-            bare = Regex("\\b$escaped\\b"),
+            bare = Regex(bareText),
             // e.g. "send this", "call me", "pick up that" — verb directed at me/this/that
             // within a couple of words.
-            directed = Regex("\\b$escaped\\b(?:\\s+\\w+){0,2}\\s+(me|this|that)\\b")
+            directed = Regex("$bareText(?:\\s+\\w+){0,2}\\s+(me|this|that)\\b")
         )
     }
 
-    // A future-commitment prefix immediately before one of these verbs means the SENDER is
-    // committing to do it themselves — a WAITING follow-up, not a request aimed at the
-    // recipient — even though the bare verb also appears in ACTION_VERBS. Real notifications
-    // ("I'll call you back after the meeting", "gonna send the file soon") were scoring ACTION
-    // because the only competing WAITING signal (the generic "i will" catch-all below) merely
-    // TIES the verb's own ACTION score, and ACTION wins ties (see TIE_BREAK_ORDER) — an actual
+    // A future-commitment prefix before one of these verbs means the SENDER is committing to
+    // do it themselves — a WAITING follow-up, not a request aimed at the recipient — even
+    // though the bare verb also appears in ACTION_VERBS. Real notifications ("I'll call you
+    // back after the meeting", "gonna send the file soon") were scoring ACTION because the
+    // only competing WAITING signal (the generic "i will" catch-all below) merely TIES the
+    // verb's own ACTION score, and ACTION wins ties (see TIE_BREAK_ORDER) — an actual
     // suppression is needed, not just an added competing score.
     //
     // Deliberately subject-agnostic ("will" alone, not just "i will"/"i'll") so a third-person
@@ -734,47 +843,90 @@ object NotificationClassifier {
     // reason the subject pronoun should matter to whether it's a commitment. "bout to"/"about
     // to"/"fixing to" are casual/regional equivalents of "going to" that TextNormalizer doesn't
     // expand (unlike "gonna"), so they're listed explicitly.
-    private fun futureCommitmentPattern(verb: String): String =
-        "\\b(?:i'll|will|going to|bout to|about to|fixing to)\\s+${Regex.escape(verb)}\\b"
+    //
+    // "will" is deliberately zero-width/immediate-only ("will $verb") — unlike "i'll"/"going
+    // to"/"let me", a bare "will" is also how a request QUESTION is phrased ("will you please
+    // check the report?"), so allowing filler words here would wrongly swallow that into a
+    // commitment suppression. The other prefixes are unambiguously self-referential regardless
+    // of what filler words come between them and the verb ("going to go check", "let me
+    // quickly send", "i'll just call") — large-scale validation turned up real casual
+    // constructions inserting a word or two (an intervening verb like "go", an adverb like
+    // "quickly"/"double") that a strict immediate-adjacency match was missing entirely (e.g.
+    // "lemme double check n ill lyk", "brb, gonna go check with the front desk").
+    private fun futureCommitmentPattern(verb: String): String {
+        val escaped = Regex.escape(verb)
+        return "\\bwill\\s+$escaped\\b|\\b(?:i'll|going to|bout to|about to|fixing to|let me)\\s+(?:\\w+\\s+){0,2}$escaped\\b"
+    }
 
     // See the suppression check in scoreAction(): these verbs double as the head word of a
     // more specific REPLY/WAITING phrase, or of promotional call-to-action framing, so that
-    // phrase already "owns" the word.
-    private val ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = mapOf(
-        // "final call"/"last call" is a deadline idiom ("last chance"), not a literal request
-        // to phone someone — without this, "call" ties DEADLINE's own score on phrases like
-        // "Final call — offer expires at midnight." and badly undercuts confidence even though
-        // the tie-break still lands on the right category (see computeConfidence's doc: a
-        // near-tie is scored as low-confidence regardless of which side the tie-break favors).
-        "call" to Regex("\\bcall me\\b|\\b(?:final|last) call\\b|${futureCommitmentPattern("call")}"),
-        "check" to Regex(
-            futureCommitmentPattern("check") +
-                // "new update available - check it out" is promotional framing, not a literal
-                // command directed at the recipient — a genuine imperative reads "check X"
-                // (an object), not the idiomatic "check it out".
-                "|\\bcheck it out\\b" +
+    // phrase already "owns" the word. Every ACTION_VERBS word gets AT LEAST the generic
+    // future-commitment suppression below (a self-referential "I'll .../going to .../let me
+    // ..." prefix means the SENDER is committing to do it, not asking the recipient) — verbs
+    // with additional idiom-specific collisions layer their own extra alternatives on top.
+    private val ACTION_VERB_SUPPRESSION_EXTRAS: Map<String, String> = mapOf(
+        // "call me"/"a quick call"/"a phone call" are noun/idiom usages, not a request to
+        // phone someone — "final call"/"last call" is a deadline idiom ("last chance"). Without
+        // these, "call" ties DEADLINE's own score on phrases like "Final call — offer expires
+        // at midnight." (see computeConfidence's doc on near-ties), and "a quick call" as a
+        // NOUN ("Are you free on Friday for a quick call?") was outright beating REPLY's own
+        // "are you free" match on a tie (see TIE_BREAK_ORDER).
+        "call" to "\\bcall me\\b|\\b(?:final|last) call\\b|\\b(?:a|the|quick|phone|video)\\s+call\\b",
+        "check" to
+            // "new update available - check it out" is promotional framing, not a literal
+            // command directed at the recipient — a genuine imperative reads "check X" (an
+            // object), not the idiomatic "check it out".
+            "\\bcheck it out\\b" +
                 // "give me a moment to check on that" — a WAITING commitment-to-look-into-it
                 // phrased as "[a] moment/second/minute/sec to check", not a request directed
                 // at the recipient.
-                "|\\b(?:a\\s+)?(?:moment|second|minute|sec)\\s+to\\s+check\\b"
-        ),
+                "|\\b(?:a\\s+)?(?:moment|second|minute|sec)\\s+to\\s+check\\b" +
+                // "checking on that"/"checkin on that rn"/"check in with the team" — a
+                // progress-status self-report (WAITING), not a request directed at the
+                // recipient; also registered as a positive WAITING signal (see WAITING_PATTERNS).
+                "|\\bcheck(?:ing|in)?\\s+(?:on|in with)\\b",
         // Only suppress when confirming something about the recipient themselves (receipt,
         // attendance, agreement — "confirm you received/got/are coming"), which is a REPLY-
         // style acknowledgment request. "Confirm the details/report/numbers" is confirming
         // a deliverable, a genuine ACTION request, and must NOT be suppressed — narrowed
         // after the broader "any 'can you confirm'" version incorrectly pulled those into
         // REPLY.
-        "confirm" to Regex("\\bcan you confirm you\\b|${futureCommitmentPattern("confirm")}"),
-        "bring" to Regex("\\bi(?:'ll| will) bring\\b|${futureCommitmentPattern("bring")}"),
-        "send" to Regex(futureCommitmentPattern("send")),
+        "confirm" to "\\bcan you confirm you\\b",
+        "bring" to "\\bi(?:'ll| will) bring\\b",
         // "Installation complete."/"Download complete." is a completion-STATUS noun phrase
         // (an FYI announcement), not an imperative verb directed at the recipient — without
         // this, it ties FYI's own "installation complete" phrase match and ACTION wins the
         // tie (see TIE_BREAK_ORDER).
-        "complete" to Regex("\\b(?:download|installation|update|setup|backup|sync|upload)\\s+complete\\b")
+        "complete" to "\\b(?:download|installation|update|setup|backup|sync|upload)\\s+complete\\b",
+        // "download finished"/"installation finished" — the same completion-STATUS collision
+        // as "complete" above, now reachable since "finish" gained inflection matching
+        // ("finished" previously never matched the old bare-word-only "\\bfinish\\b").
+        "finish" to "\\b(?:download|installation|update|setup|backup|sync|upload)\\s+finished\\b",
+        // "Lock in Your Clients' Gains!" — a marketing idiom ("lock in a rate/price/gain"), not
+        // a literal request to secure a physical lock.
+        "lock" to "\\block(?:ing)?\\s+in\\b",
+        // "text me" mirrors "call me" — a REPLY-style request to be contacted, not a request to
+        // send someone else a text.
+        "text" to "\\btext me\\b"
     )
 
-    private val REQUEST_MARKERS = phrases("can you", "could you", "would you", "need you to")
+    private val ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = ACTION_VERBS.associate { verb ->
+        val extra = ACTION_VERB_SUPPRESSION_EXTRAS[verb.word]
+        val generic = futureCommitmentPattern(verb.word)
+        verb.word to Regex(if (extra != null) "$extra|$generic" else generic)
+    }
+
+    // "please"/"kindly"/"requesting that you" only add their ACTION_REQUEST_MARKER_BONUS when
+    // an ACTION_VERBS word ALSO matched (see scoreAction's verbHit gate), so adding these
+    // common polite/formal request markers can't manufacture a false ACTION signal on its own
+    // — it only strengthens an already-real verb match, exactly like "can you"/"could you"
+    // already do.
+    private val REQUEST_MARKERS = phrases(
+        "can you", "could you", "would you", "need you to", "please", "kindly", "requesting that you"
+    ) + listOf(
+        Regex("\\bwhen you get a (?:chance|sec|second|minute|moment)\\b"),
+        Regex("\\bat your convenience\\b")
+    )
 
     private val WAITING_PATTERNS: List<Regex> = phrases(
         "i'll send", "i will", "i'll check", "i'll get back to you", "i'll have",
@@ -801,7 +953,29 @@ object NotificationClassifier {
         // literally the following verb.
         "give me a moment", "give me a second", "give me a minute",
         "one moment", "one sec", "one second", "almost done", "about done",
-        "hang tight", "hold up", "in progress"
+        "hang tight", "hold up", "in progress",
+        // Casual "hang on"/"hold on" family — large-scale validation turned up a big cluster
+        // of these with no existing coverage ("almost got the fix ready, hang on", "hol on,
+        // checkin on that rn") — "hol on" is a common dropped-letter typo of "hold on" that
+        // TextNormalizer doesn't expand.
+        "hang on", "hold on", "hol on",
+        // "brb" normalizes to "be right back" via TextNormalizer.
+        "be right back",
+        // Additional third-person/formal future-commitment idioms in the same family as
+        // "will follow up"/"will have" above — "will get to it", "will ship", "will update",
+        // and the sender describing something as already queued/in the pipeline.
+        "will get to it", "will ship", "will update", "queued up",
+        // Literal "waiting" language — surprisingly absent before despite being the category's
+        // own name; a message that says it's still waiting on something, or asks for more
+        // time, is about as direct a WAITING signal as exists.
+        "waiting to hear", "waiting on", "still waiting", "still sorting it out",
+        "still finalizing",
+        // A formal support/status-update idiom family ("We're aware of the issue and our
+        // engineering team is actively investigating — we'll share an update...").
+        "actively investigating", "we'll share an update", "will share an update",
+        // Casual "swamped"/"radio silence" idioms for "busy, will get to it" and "sorry for
+        // not responding" respectively.
+        "swamped", "radio silence"
     ) + listOf(
         // "expect it in your inbox shortly" — a bare "expect" commitment without the "should"
         // prefix above. Scoped to "expect + a determiner/pronoun" (it/the/your/this/that)
@@ -833,24 +1007,53 @@ object NotificationClassifier {
         // head out with the package"), which futureCommitmentPattern's per-verb entries below
         // don't reach since they're scoped to the specific verbs that need ACTION suppression.
         Regex("\\b(?:bout to|about to|fixing to)\\b"),
-        // "I'll call you back", "gonna send the file soon" (normalizes to "going to send...")
-        // — see futureCommitmentPattern's doc on ACTION_VERB_SUPPRESSED_BY for why a real
-        // WAITING match is needed here, not just suppressing the verb's ACTION score.
-        Regex(futureCommitmentPattern("call")),
-        Regex(futureCommitmentPattern("send")),
-        Regex(futureCommitmentPattern("check")),
-        Regex(futureCommitmentPattern("confirm"))
-    )
+        // "give me until end of day"/"gimme til Tuesday, still sorting it out" — generalizes
+        // the literal "give me a moment/second/minute" phrases above to any "give me ... <time
+        // word>" construction, including the "til"/"till"/"until" family (note: "gimme"
+        // normalizes to "give me" via TextNormalizer, but "til" does not normalize to "until").
+        Regex("\\bgive me\\b.{0,25}\\b(?:min|mins|minute|minutes|moment|second|secs|sec|time|until|till|til|end of day|a bit)\\b"),
+        // "almost got it figured out"/"almost there"/"almost got the fix ready" — broader than
+        // the literal "almost done"/"about done" phrases above.
+        Regex("\\balmost\\s+(?:done|ready|there|got|finished)\\b"),
+        // "checking on that"/"checkin on that rn"/"check in with the team" — see the matching
+        // suppression on ACTION_VERB_SUPPRESSION_EXTRAS["check"] for why this is also excluded
+        // from ACTION's own "check" credit.
+        Regex("\\bcheck(?:ing|in)?\\s+(?:on|in with)\\b"),
+        // "he'll swing by and take a look" — a third-party visit/handle-it commitment idiom.
+        Regex("\\bswing by\\b")
+    ) +
+        // "I'll call you back", "gonna send the file soon" (normalizes to "going to send...") —
+        // see futureCommitmentPattern's doc on ACTION_VERB_SUPPRESSED_BY for why a real WAITING
+        // match is needed here, not just suppressing the verb's ACTION score. Generalized to
+        // EVERY ACTION_VERBS word (not just call/send/check/confirm) so any future-commitment-
+        // framed request verb ("fixing to review it now", "going to go pick that up") reads as
+        // WAITING the same way.
+        ACTION_VERBS.map { Regex(futureCommitmentPattern(it.word)) }
 
     private val REPLY_PATTERNS = phrases(
         "let me know", "lmk", "tell me", "get back to me", "call me", "text me", "hmu",
         "hit me up", "what do you think", "can you confirm", "keep me posted", "are you free",
-        "when are you free"
+        "when are you free",
+        // Casual check-in/reply-seeking phrasing found via large-scale validation's REPLY-miss
+        // analysis — none of these matched any prior pattern and fell through to the FYI
+        // default. "thoughts" is deliberately bare (not "any thoughts on") since it shows up
+        // standalone ("So... thoughts?", "🤔 thoughts?") as often as attached to an object.
+        "thoughts", "any update", "no reply yet", "did you see my", "did you get my",
+        "still up for", "still on for", "still meeting", "the verdict", "anyone home",
+        "still there", "how about you", "what is up"
     ) + listOf(
         // "how was your day" — a casual check-in question with no ACTION_VERBS/REQUEST_MARKERS
         // match, so it previously scored 0 everywhere and fell through to a weak, essentially
         // arbitrary pick (real-device testing saw this land on ACTION at 12% confidence).
-        Regex("\\bhow (?:was|is) your\\b")
+        Regex("\\bhow (?:was|is) your\\b"),
+        // "did it work??"/"did that work for u" — a results/receipt check, distinct from
+        // "did you see my"/"did you get my" above (those check on the MESSAGE, this checks on
+        // an OUTCOME).
+        Regex("\\bdid (?:it|that) work\\b"),
+        // "did that make sense?" — a comprehension check.
+        Regex("\\bmake sense\\b"),
+        // "u good?"/"u there?" normalize to "you good"/"you there" via TextNormalizer.
+        Regex("\\byou (?:good|there)\\b")
     )
 
     // Broader than DEADLINE_STANDALONE_DATE_PATTERNS — used only to populate extractedDate, not scoring.
