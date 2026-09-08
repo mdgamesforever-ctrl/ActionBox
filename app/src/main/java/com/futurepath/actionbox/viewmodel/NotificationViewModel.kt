@@ -1,8 +1,11 @@
 package com.futurepath.actionbox.viewmodel
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.android.billingclient.api.ProductDetails
+import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationEntity
@@ -21,7 +24,8 @@ import kotlinx.coroutines.launch
 
 class NotificationViewModel(
     private val repository: NotificationRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val billingRepository: BillingRepository
 ) : ViewModel() {
 
     val notifications: StateFlow<List<NotificationEntity>> = repository.observeAll()
@@ -57,6 +61,11 @@ class NotificationViewModel(
     private val _digestTime = MutableStateFlow(DigestTime(SettingsRepository.DEFAULT_DIGEST_HOUR, SettingsRepository.DEFAULT_DIGEST_MINUTE))
     val digestTime: StateFlow<DigestTime> = _digestTime.asStateFlow()
 
+    /** The Pro subscription's product details, once Play Billing has loaded them — null until
+     * then, which the paywall (ui/paywall/PaywallScreen) shows as a loading state. */
+    val productDetails: StateFlow<ProductDetails?> = billingRepository.productDetails
+    val billingUnavailable: StateFlow<Boolean> = billingRepository.billingUnavailable
+
     init {
         settingsRepository.correctionLearningEnabled
             .onEach { _correctionLearningEnabled.value = it }
@@ -88,7 +97,15 @@ class NotificationViewModel(
         }
     }
 
-    fun setPro(isPro: Boolean) {
+    /**
+     * Bypasses Play Billing entirely and just flips the stored flag — kept for our own testing
+     * since there's no Play Console listing reachable from this environment (see
+     * BillingRepository's doc), and clearly separated in the Settings UI ("Debug tools") from
+     * the real "Upgrade to Pro"/"Manage subscription" flow real users go through. A genuine
+     * purchase or entitlement change instead flows through [BillingRepository] directly into
+     * [SettingsRepository.isPro] — see [purchasePro].
+     */
+    fun setProDebugOverride(isPro: Boolean) {
         viewModelScope.launch {
             settingsRepository.setPro(isPro)
             // Downgrading should trim any now-over-the-limit history right away rather than
@@ -96,6 +113,19 @@ class NotificationViewModel(
             // retention sweep only ever deletes, never restores.
             repository.enforceRetentionPolicy()
         }
+    }
+
+    /** Launches Play's purchase UI for the Pro subscription from the paywall's Subscribe
+     * button. [BillingRepository] itself updates [SettingsRepository.isPro] once the purchase
+     * completes and is acknowledged — nothing further to do here. */
+    fun purchasePro(activity: Activity) {
+        billingRepository.launchPurchaseFlow(activity)
+    }
+
+    /** Re-attempts the Play Billing connection — surfaced as a "try again" action on the
+     * paywall when [billingUnavailable] is true (no network, Play Store outage, etc.). */
+    fun retryBillingConnection() {
+        billingRepository.startConnection()
     }
 
     /**
@@ -117,11 +147,12 @@ class NotificationViewModel(
 
     class Factory(
         private val repository: NotificationRepository,
-        private val settingsRepository: SettingsRepository
+        private val settingsRepository: SettingsRepository,
+        private val billingRepository: BillingRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return NotificationViewModel(repository, settingsRepository) as T
+            return NotificationViewModel(repository, settingsRepository, billingRepository) as T
         }
     }
 }

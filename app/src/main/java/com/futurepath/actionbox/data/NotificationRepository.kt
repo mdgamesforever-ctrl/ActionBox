@@ -103,9 +103,16 @@ class NotificationRepository(context: Context) {
      * same category reinforce each other rather than one overriding the other. Purely local:
      * everything this reads comes from this device's own Room database, no account or network
      * involved.
+     *
+     * Pro-gated ("Smart corrections" — see SettingsScreen and the paywall): requires BOTH
+     * [SettingsRepository.isPro] and the user's own on/off preference, so a Free user's
+     * preference is remembered and simply picks back up automatically after they upgrade,
+     * rather than needing to be re-enabled.
      */
     private suspend fun learningBoostsFor(sourceApp: String, sender: String, normalizedText: String): Map<ClassifiedState, Int> {
-        if (!settingsRepository.correctionLearningEnabled.first()) return emptyMap()
+        if (!settingsRepository.isPro.first() || !settingsRepository.correctionLearningEnabled.first()) {
+            return emptyMap()
+        }
 
         val boosts = mutableMapOf<ClassifiedState, Int>()
         learningDao.strongCategoryFor(LearningPatternType.SENDER, sender)?.let {

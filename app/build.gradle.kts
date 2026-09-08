@@ -75,6 +75,12 @@ dependencies {
     // reminders/ReminderScheduler.kt.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Free-tier banner ads — see ui/ads/BannerAdView.kt.
+    implementation("com.google.android.gms:play-services-ads:23.3.0")
+
+    // Pro subscription purchase flow — see billing/BillingRepository.kt.
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
+
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

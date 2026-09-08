@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.service.NotificationAccessUtils
@@ -28,7 +29,8 @@ class MainActivity : ComponentActivity() {
     private val viewModel: NotificationViewModel by viewModels {
         NotificationViewModel.Factory(
             NotificationRepository.getInstance(applicationContext),
-            SettingsRepository.getInstance(applicationContext)
+            SettingsRepository.getInstance(applicationContext),
+            BillingRepository.getInstance(applicationContext)
         )
     }
 

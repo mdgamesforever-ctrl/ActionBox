@@ -1,7 +1,10 @@
 package com.futurepath.actionbox.ui.settings
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -32,20 +36,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
 import java.util.Locale
 
 /**
- * App-wide settings — retention plan, the correction-learning toggle, and the reminder system
- * (daily digest + WAITING follow-up nudges). All backed by
+ * App-wide settings — plan/subscription status, the Pro-gated correction-learning toggle, and
+ * the reminder system (daily digest + WAITING follow-up nudges). All backed by
  * [com.futurepath.actionbox.data.SettingsRepository] via the view model, so a toggle here takes
  * effect immediately rather than being a local UI-only flag.
  */
 @Composable
 fun SettingsScreen(
     isPro: Boolean,
-    onProChange: (Boolean) -> Unit,
+    onUpgradeClick: () -> Unit,
+    onDebugProOverrideChange: (Boolean) -> Unit,
     correctionLearningEnabled: Boolean,
     onCorrectionLearningChange: (Boolean) -> Unit,
     digestsEnabled: Boolean,
@@ -53,6 +59,8 @@ fun SettingsScreen(
     digestTime: DigestTime,
     onDigestTimeChange: (DigestTime) -> Unit
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -62,19 +70,27 @@ fun SettingsScreen(
         Text(text = "Settings", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(24.dp))
 
-        SectionHeader("Notification history")
-        Text(
-            text = "Free plan: notifications are kept for ${NotificationRepository.FREE_RETENTION_DAYS} days, " +
-                "then automatically removed. Pro: unlimited history, nothing is ever auto-deleted.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        SettingToggleRow(
-            title = if (isPro) "Pro (unlimited history)" else "Free (${NotificationRepository.FREE_RETENTION_DAYS}-day history)",
-            subtitle = "Standing in for real billing — flip this to try Pro's unlimited retention.",
-            checked = isPro,
-            onCheckedChange = onProChange
-        )
+        SectionHeader("Plan")
+        if (isPro) {
+            Text(
+                text = "✓ Pro — unlimited notification history, no ads, smart corrections enabled.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = { openManageSubscription(context) }) {
+                Text("Manage subscription")
+            }
+        } else {
+            Text(
+                text = "Free plan: notifications are kept for ${NotificationRepository.FREE_RETENTION_DAYS} " +
+                    "days, ads are shown, and smart corrections are off. Pro removes all three limits.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(onClick = onUpgradeClick, modifier = Modifier.fillMaxWidth()) {
+                Text("Upgrade to Pro")
+            }
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
         HorizontalDivider()
@@ -84,17 +100,21 @@ fun SettingsScreen(
         Text(
             text = "When you correct a notification's category, ActionBox remembers the pattern " +
                 "(sender, app, or exact phrasing) and uses it to classify similar notifications " +
-                "going forward. Turning this off stops new corrections from influencing future " +
-                "classification — your correction history is kept and picks back up if you turn " +
-                "it back on.",
+                "going forward. A Pro feature — your on/off preference is kept even while on the " +
+                "Free plan and picks back up as soon as you upgrade.",
             style = MaterialTheme.typography.bodyMedium
         )
         Spacer(modifier = Modifier.height(12.dp))
         SettingToggleRow(
             title = "Learn from my corrections",
-            subtitle = null,
-            checked = correctionLearningEnabled,
-            onCheckedChange = onCorrectionLearningChange
+            subtitle = if (!isPro) "Requires Pro — tap to upgrade" else null,
+            // Reflects what's actually ACTIVE (see NotificationRepository.learningBoostsFor,
+            // which requires both isPro and this preference) rather than just the raw stored
+            // preference, so a Free user never sees this toggle "on" while it does nothing.
+            checked = isPro && correctionLearningEnabled,
+            onCheckedChange = { wantsOn ->
+                if (!isPro) onUpgradeClick() else onCorrectionLearningChange(wantsOn)
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -115,7 +135,34 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
             DigestTimeRow(time = digestTime, onTimeChange = onDigestTimeChange)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader("Debug tools")
+        Text(
+            text = "For our own testing only — bypasses Google Play Billing entirely rather than " +
+                "making a real purchase.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        SettingToggleRow(
+            title = "Simulate Pro",
+            subtitle = "No real purchase — for local testing only.",
+            checked = isPro,
+            onCheckedChange = onDebugProOverrideChange
+        )
     }
+}
+
+private fun openManageSubscription(context: Context) {
+    val uri = Uri.parse(
+        "https://play.google.com/store/account/subscriptions" +
+            "?sku=${BillingRepository.PRO_SUBSCRIPTION_PRODUCT_ID}&package=${context.packageName}"
+    )
+    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
 }
 
 /**

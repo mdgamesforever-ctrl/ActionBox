@@ -7,6 +7,11 @@
          (reminders/DigestWorker.kt, reminders/WaitingNudgeWorker.kt). Requested at runtime
          when the user enables the digest toggle in Settings — see SettingsScreen.kt. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Needed for AdMob (free-tier banner ads) and Play Billing (the Pro subscription) to
+         reach Google's servers — the only network traffic this app makes; see the onboarding
+         screen copy, which should be read alongside this as "your captured notification
+         content never leaves the device," not "the app makes no network calls at all". -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".ActionBoxApplication"
@@ -15,6 +20,13 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.ActionBox">
+
+        <!-- Google's published TEST AdMob App ID — always serves test ads, never real ones.
+             Swap for a real App ID from the AdMob console before release (see
+             ui/ads/BannerAdView.kt for the matching test ad unit ID). -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <activity
             android:name=".MainActivity"

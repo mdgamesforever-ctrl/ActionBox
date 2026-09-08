@@ -1,9 +1,11 @@
 package com.futurepath.actionbox
 
 import android.app.Application
+import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.reminders.ReminderNotifications
 import com.futurepath.actionbox.reminders.ReminderScheduler
+import com.google.android.gms.ads.MobileAds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,6 +26,12 @@ class ActionBoxApplication : Application() {
         super.onCreate()
 
         ReminderNotifications.ensureChannels(this)
+
+        // Free-tier banner ads (ui/ads/BannerAdView.kt) and the Pro subscription
+        // (billing/BillingRepository.kt) — both need to be ready before any screen that uses
+        // them is first shown, so both are kicked off here rather than lazily on first use.
+        MobileAds.initialize(this)
+        BillingRepository.getInstance(this).startConnection()
 
         // Single reactive source of truth for the reminder schedule: fires once immediately
         // with whatever's currently stored (including the defaults, on first launch) to

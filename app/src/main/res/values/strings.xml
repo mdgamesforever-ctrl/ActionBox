@@ -2,7 +2,7 @@
     <string name="app_name">ActionBox</string>
 
     <string name="onboarding_title">Let ActionBox read your notifications</string>
-    <string name="onboarding_body">ActionBox organizes incoming notifications (like WhatsApp messages, texts, and emails) into actionable items. To do that, it needs permission to read notification content.\n\nEverything stays on this device — nothing is uploaded anywhere. You can revoke this access at any time from system settings.</string>
+    <string name="onboarding_body">ActionBox organizes incoming notifications (like WhatsApp messages, texts, and emails) into actionable items. To do that, it needs permission to read notification content.\n\nYour notification content stays on this device and is never uploaded anywhere — classification runs entirely on-device. (The free plan shows ads, and Pro purchases go through Google Play; neither ever sees your notification content.) You can revoke notification access at any time from system settings.</string>
     <string name="onboarding_grant_button">Open Notification Access Settings</string>
     <string name="onboarding_status_granted">Notification access is granted. ActionBox is capturing notifications.</string>
     <string name="onboarding_status_not_granted">Notification access has not been granted yet.</string>

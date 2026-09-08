@@ -3,6 +3,7 @@ package com.futurepath.actionbox.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -34,14 +35,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.futurepath.actionbox.classification.ClassifiedState
+import com.futurepath.actionbox.ui.ads.BannerAdView
 import com.futurepath.actionbox.ui.feed.NotificationFeedScreen
 import com.futurepath.actionbox.ui.inbox.CategoryInboxScreen
 import com.futurepath.actionbox.ui.inbox.InboxTab
+import com.futurepath.actionbox.ui.paywall.PaywallScreen
 import com.futurepath.actionbox.ui.settings.SettingsScreen
 import com.futurepath.actionbox.viewmodel.NotificationViewModel
 
 private const val SETTINGS_ROUTE = "settings"
 private const val DEBUG_ROUTE = "debug"
+private const val PAYWALL_ROUTE = "paywall"
 
 /**
  * The app's primary navigation shell: bottom-nav tabs for the grouped inboxes (see [InboxTab]),
@@ -59,6 +63,8 @@ fun MainScreen(viewModel: NotificationViewModel) {
     val correctionLearningEnabled by viewModel.correctionLearningEnabled.collectAsStateWithLifecycle()
     val digestsEnabled by viewModel.digestsEnabled.collectAsStateWithLifecycle()
     val digestTime by viewModel.digestTime.collectAsStateWithLifecycle()
+    val productDetails by viewModel.productDetails.collectAsStateWithLifecycle()
+    val billingUnavailable by viewModel.billingUnavailable.collectAsStateWithLifecycle()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -82,32 +88,40 @@ fun MainScreen(viewModel: NotificationViewModel) {
             // the app and use the back button (via the system/gesture nav) to return, the same
             // way any secondary screen would.
             if (currentTab != null) {
-                NavigationBar {
-                    InboxTab.entries.forEach { tab ->
-                        val count = tab.states.sumOf { state -> itemsByCategory[state]?.size ?: 0 }
-                        NavigationBarItem(
-                            selected = tab == currentTab,
-                            onClick = {
-                                if (tab != currentTab) {
-                                    navController.navigate(tab.route) {
-                                        // Standard bottom-nav behavior: switching tabs doesn't
-                                        // pile up back-stack entries, and returning to a
-                                        // previously-visited tab restores its scroll position.
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
+                Column {
+                    // Free-tier banner ad — see ui/ads/BannerAdView's doc. Pro removes ads
+                    // entirely, so this is skipped rather than rendered-and-hidden.
+                    if (!isPro) {
+                        BannerAdView()
+                    }
+                    NavigationBar {
+                        InboxTab.entries.forEach { tab ->
+                            val count = tab.states.sumOf { state -> itemsByCategory[state]?.size ?: 0 }
+                            NavigationBarItem(
+                                selected = tab == currentTab,
+                                onClick = {
+                                    if (tab != currentTab) {
+                                        navController.navigate(tab.route) {
+                                            // Standard bottom-nav behavior: switching tabs
+                                            // doesn't pile up back-stack entries, and returning
+                                            // to a previously-visited tab restores its scroll
+                                            // position.
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                        launchSingleTop = true
-                                        restoreState = true
                                     }
-                                }
-                            },
-                            icon = {
-                                BadgedBox(badge = { if (count > 0) Badge { Text(count.toString()) } }) {
-                                    Icon(iconFor(tab), contentDescription = tab.label)
-                                }
-                            },
-                            label = { Text(tab.label) }
-                        )
+                                },
+                                icon = {
+                                    BadgedBox(badge = { if (count > 0) Badge { Text(count.toString()) } }) {
+                                        Icon(iconFor(tab), contentDescription = tab.label)
+                                    }
+                                },
+                                label = { Text(tab.label) }
+                            )
+                        }
                     }
                 }
             }
@@ -130,13 +144,22 @@ fun MainScreen(viewModel: NotificationViewModel) {
             composable(SETTINGS_ROUTE) {
                 SettingsScreen(
                     isPro = isPro,
-                    onProChange = viewModel::setPro,
+                    onUpgradeClick = { navController.navigate(PAYWALL_ROUTE) },
+                    onDebugProOverrideChange = viewModel::setProDebugOverride,
                     correctionLearningEnabled = correctionLearningEnabled,
                     onCorrectionLearningChange = viewModel::setCorrectionLearningEnabled,
                     digestsEnabled = digestsEnabled,
                     onDigestsEnabledChange = viewModel::setDigestsEnabled,
                     digestTime = digestTime,
                     onDigestTimeChange = viewModel::setDigestTime
+                )
+            }
+            composable(PAYWALL_ROUTE) {
+                PaywallScreen(
+                    productDetails = productDetails,
+                    billingUnavailable = billingUnavailable,
+                    onSubscribeClick = viewModel::purchasePro,
+                    onRetryClick = viewModel::retryBillingConnection
                 )
             }
             composable(DEBUG_ROUTE) {
@@ -155,6 +178,7 @@ private fun TopBarTitle(currentRoute: String?, currentTab: InboxTab?, onOpenDebu
     val title = when {
         currentTab != null -> currentTab.label
         currentRoute == SETTINGS_ROUTE -> "Settings"
+        currentRoute == PAYWALL_ROUTE -> "Upgrade to Pro"
         currentRoute == DEBUG_ROUTE -> "Debug Feed"
         else -> "ActionBox"
     }
