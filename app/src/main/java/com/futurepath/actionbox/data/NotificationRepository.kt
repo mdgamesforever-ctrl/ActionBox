@@ -19,6 +19,13 @@ class NotificationRepository(context: Context) {
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
+    /** One-shot read for the reminder workers (see com.futurepath.actionbox.reminders), which
+     * run as a single background pass rather than observing a live [Flow]. */
+    suspend fun getAllOnce(): List<NotificationEntity> = dao.getAll()
+
+    /** See [NotificationEntity.waitingNudgedAt]. */
+    suspend fun markWaitingNudged(id: Long, nudgedAt: Long) = dao.markWaitingNudged(id, nudgedAt)
+
     /**
      * Delegates the whole check-then-insert sequence to [NotificationDao.captureIfNew],
      * which runs it as a single Room transaction so concurrent calls can't race each other

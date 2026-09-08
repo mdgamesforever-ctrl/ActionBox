@@ -57,6 +57,8 @@ fun MainScreen(viewModel: NotificationViewModel) {
     val itemsByCategory by viewModel.itemsByCategory.collectAsStateWithLifecycle()
     val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val correctionLearningEnabled by viewModel.correctionLearningEnabled.collectAsStateWithLifecycle()
+    val digestsEnabled by viewModel.digestsEnabled.collectAsStateWithLifecycle()
+    val digestTime by viewModel.digestTime.collectAsStateWithLifecycle()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -130,7 +132,11 @@ fun MainScreen(viewModel: NotificationViewModel) {
                     isPro = isPro,
                     onProChange = viewModel::setPro,
                     correctionLearningEnabled = correctionLearningEnabled,
-                    onCorrectionLearningChange = viewModel::setCorrectionLearningEnabled
+                    onCorrectionLearningChange = viewModel::setCorrectionLearningEnabled,
+                    digestsEnabled = digestsEnabled,
+                    onDigestsEnabledChange = viewModel::setDigestsEnabled,
+                    digestTime = digestTime,
+                    onDigestTimeChange = viewModel::setDigestTime
                 )
             }
             composable(DEBUG_ROUTE) {

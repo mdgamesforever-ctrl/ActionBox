@@ -54,5 +54,18 @@ data class NotificationEntity(
     // shown in the UI or used for any decision yet. Null if ML classification is unavailable
     // or failed for this notification.
     val mlClassifiedState: ClassifiedState? = null,
-    val mlConfidence: Int? = null
+    val mlConfidence: Int? = null,
+    // Set once a WAITING follow-up nudge has been sent for this item (see
+    // com.futurepath.actionbox.reminders.WaitingNudgeWorker) so it's never nudged twice — null
+    // until then, and left untouched if the item is later corrected away from WAITING.
+    val waitingNudgedAt: Long? = null
 )
+
+/**
+ * The category actually shown to the user for [this] notification — their correction if they've
+ * made one, otherwise the classifier's own pick. Shared by the grouped inbox screens
+ * (NotificationViewModel.itemsByCategory) and the reminder workers so both agree on what's
+ * currently "in" each category.
+ */
+val NotificationEntity.effectiveState: ClassifiedState?
+    get() = correctedState ?: classifiedState

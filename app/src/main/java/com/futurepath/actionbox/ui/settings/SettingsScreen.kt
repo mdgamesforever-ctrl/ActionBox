@@ -1,5 +1,11 @@
 package com.futurepath.actionbox.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,27 +15,43 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
+import java.util.Locale
 
 /**
- * App-wide settings — retention plan and the correction-learning toggle. Both are backed by
+ * App-wide settings — retention plan, the correction-learning toggle, and the reminder system
+ * (daily digest + WAITING follow-up nudges). All backed by
  * [com.futurepath.actionbox.data.SettingsRepository] via the view model, so a toggle here takes
- * effect immediately for every future notification, not just a local UI flag.
+ * effect immediately rather than being a local UI-only flag.
  */
 @Composable
 fun SettingsScreen(
     isPro: Boolean,
     onProChange: (Boolean) -> Unit,
     correctionLearningEnabled: Boolean,
-    onCorrectionLearningChange: (Boolean) -> Unit
+    onCorrectionLearningChange: (Boolean) -> Unit,
+    digestsEnabled: Boolean,
+    onDigestsEnabledChange: (Boolean) -> Unit,
+    digestTime: DigestTime,
+    onDigestTimeChange: (DigestTime) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -74,7 +96,100 @@ fun SettingsScreen(
             checked = correctionLearningEnabled,
             onCheckedChange = onCorrectionLearningChange
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader("Reminders")
+        Text(
+            text = "Get one notification a day summarizing what needs your attention (e.g. " +
+                "\"3 Actions, 2 Replies, 1 Waiting need your attention\"), plus a follow-up " +
+                "nudge if something you're WAITING on hasn't heard back within its implied " +
+                "timeframe.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        DigestToggleRow(digestsEnabled = digestsEnabled, onDigestsEnabledChange = onDigestsEnabledChange)
+        if (digestsEnabled) {
+            Spacer(modifier = Modifier.height(12.dp))
+            DigestTimeRow(time = digestTime, onTimeChange = onDigestTimeChange)
+        }
     }
+}
+
+/**
+ * Wraps the digest toggle with the API 33+ POST_NOTIFICATIONS runtime-permission request:
+ * turning it ON when that permission isn't already granted asks for it first, and only reports
+ * the toggle as enabled if the user actually grants it — leaving it visibly OFF rather than
+ * silently "on" with no notifications ever appearing. Turning it OFF never needs the
+ * permission, so that path skips straight to [onDigestsEnabledChange].
+ */
+@Composable
+private fun DigestToggleRow(digestsEnabled: Boolean, onDigestsEnabledChange: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> onDigestsEnabledChange(granted) }
+
+    SettingToggleRow(
+        title = "Daily digest & waiting nudges",
+        subtitle = null,
+        checked = digestsEnabled,
+        onCheckedChange = { wantsEnabled ->
+            if (!wantsEnabled) {
+                onDigestsEnabledChange(false)
+                return@SettingToggleRow
+            }
+            val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            if (needsPermission) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                onDigestsEnabledChange(true)
+            }
+        }
+    )
+}
+
+@Composable
+private fun DigestTimeRow(time: DigestTime, onTimeChange: (DigestTime) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "Digest time", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(formatDigestTime(time))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DIGEST_TIME_OPTIONS.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(formatDigestTime(option)) },
+                        onClick = {
+                            expanded = false
+                            onTimeChange(option)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Half-hour granularity is plenty for "roughly when in the morning/day should this fire" —
+// full-precision minute selection isn't worth the extra UI for this setting.
+private val DIGEST_TIME_OPTIONS: List<DigestTime> = (0 until 24).flatMap { hour ->
+    listOf(DigestTime(hour, 0), DigestTime(hour, 30))
+}
+
+private fun formatDigestTime(time: DigestTime): String {
+    val amPm = if (time.hour < 12) "AM" else "PM"
+    val hour12 = time.hour % 12
+    return String.format(Locale.US, "%d:%02d %s", if (hour12 == 0) 12 else hour12, time.minute, amPm)
 }
 
 @Composable

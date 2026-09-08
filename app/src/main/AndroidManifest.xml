@@ -3,6 +3,10 @@
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required on API 33+ to post the daily digest / WAITING follow-up notifications
+         (reminders/DigestWorker.kt, reminders/WaitingNudgeWorker.kt). Requested at runtime
+         when the user enables the digest toggle in Settings — see SettingsScreen.kt. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".ActionBoxApplication"

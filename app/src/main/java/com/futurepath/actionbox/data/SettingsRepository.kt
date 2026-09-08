@@ -5,11 +5,21 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "actionbox_settings")
+
+/** Wall-clock time of day the daily digest fires — see [SettingsRepository.digestTime]. */
+data class DigestTime(val hour: Int, val minute: Int) {
+    init {
+        require(hour in 0..23) { "hour must be 0-23, was $hour" }
+        require(minute in 0..59) { "minute must be 0-59, was $minute" }
+    }
+}
 
 /**
  * User-configurable app settings, persisted via Jetpack DataStore (survives process death,
@@ -42,6 +52,26 @@ class SettingsRepository(context: Context) {
         prefs[IS_PRO] ?: false
     }
 
+    /**
+     * Whether the reminder system — the daily digest AND WAITING follow-up nudges (see
+     * [DigestWorker][com.futurepath.actionbox.reminders.DigestWorker] and
+     * [WaitingNudgeWorker][com.futurepath.actionbox.reminders.WaitingNudgeWorker]) — is on.
+     * One switch for both rather than two: they're both "ActionBox proactively tells you
+     * something" notifications, and splitting them into separate toggles is more settings-
+     * screen complexity than the difference is worth for v1.
+     */
+    val digestsEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[DIGESTS_ENABLED] ?: true
+    }
+
+    /** Defaults to 9:00 AM — see [DigestTime]. */
+    val digestTime: Flow<DigestTime> = dataStore.data.map { prefs ->
+        DigestTime(
+            hour = prefs[DIGEST_HOUR] ?: DEFAULT_DIGEST_HOUR,
+            minute = prefs[DIGEST_MINUTE] ?: DEFAULT_DIGEST_MINUTE
+        )
+    }.distinctUntilChanged()
+
     suspend fun setCorrectionLearningEnabled(enabled: Boolean) {
         dataStore.edit { prefs -> prefs[CORRECTION_LEARNING_ENABLED] = enabled }
     }
@@ -50,9 +80,26 @@ class SettingsRepository(context: Context) {
         dataStore.edit { prefs -> prefs[IS_PRO] = isPro }
     }
 
+    suspend fun setDigestsEnabled(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[DIGESTS_ENABLED] = enabled }
+    }
+
+    suspend fun setDigestTime(time: DigestTime) {
+        dataStore.edit { prefs ->
+            prefs[DIGEST_HOUR] = time.hour
+            prefs[DIGEST_MINUTE] = time.minute
+        }
+    }
+
     companion object {
         private val CORRECTION_LEARNING_ENABLED = booleanPreferencesKey("correction_learning_enabled")
         private val IS_PRO = booleanPreferencesKey("is_pro")
+        private val DIGESTS_ENABLED = booleanPreferencesKey("digests_enabled")
+        private val DIGEST_HOUR = intPreferencesKey("digest_hour")
+        private val DIGEST_MINUTE = intPreferencesKey("digest_minute")
+
+        const val DEFAULT_DIGEST_HOUR = 9
+        const val DEFAULT_DIGEST_MINUTE = 0
 
         @Volatile
         private var instance: SettingsRepository? = null

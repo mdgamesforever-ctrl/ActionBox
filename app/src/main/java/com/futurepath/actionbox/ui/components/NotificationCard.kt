@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.ConfidenceTier
 import com.futurepath.actionbox.data.NotificationEntity
+import com.futurepath.actionbox.data.effectiveState
 import java.text.DateFormat
 import java.util.Date
 
@@ -48,7 +49,7 @@ fun NotificationCard(notification: NotificationEntity, onCorrect: (Long, Classif
 
     // The corrected category (if the user has picked one) is what's actually shown and is
     // treated as current; classifiedState is kept untouched in the row for comparison.
-    val displayedState = notification.correctedState ?: notification.classifiedState
+    val displayedState = notification.effectiveState
 
     Card(
         modifier = Modifier

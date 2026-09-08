@@ -42,6 +42,11 @@ interface NotificationDao {
     @Query("DELETE FROM captured_notifications WHERE timestamp < :cutoffTimestamp")
     suspend fun deleteOlderThan(cutoffTimestamp: Long)
 
+    // See NotificationEntity.waitingNudgedAt — marks a WAITING item as already followed up on
+    // so com.futurepath.actionbox.reminders.WaitingNudgeWorker never nudges it twice.
+    @Query("UPDATE captured_notifications SET waitingNudgedAt = :nudgedAt WHERE id = :id")
+    suspend fun markWaitingNudged(id: Long, nudgedAt: Long)
+
     @Query(
         """
         UPDATE captured_notifications

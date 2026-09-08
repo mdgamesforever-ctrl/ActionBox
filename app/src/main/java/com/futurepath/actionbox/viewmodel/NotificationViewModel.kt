@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.futurepath.actionbox.classification.ClassifiedState
+import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
+import com.futurepath.actionbox.data.effectiveState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +38,7 @@ class NotificationViewModel(
      * the raw debug feed both read from the exact same underlying list.
      */
     val itemsByCategory: StateFlow<Map<ClassifiedState, List<NotificationEntity>>> = notifications
-        .map { list -> list.groupBy { it.correctedState ?: it.classifiedState ?: ClassifiedState.FYI } }
+        .map { list -> list.groupBy { it.effectiveState ?: ClassifiedState.FYI } }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -49,12 +51,24 @@ class NotificationViewModel(
     private val _isPro = MutableStateFlow(false)
     val isPro: StateFlow<Boolean> = _isPro.asStateFlow()
 
+    private val _digestsEnabled = MutableStateFlow(true)
+    val digestsEnabled: StateFlow<Boolean> = _digestsEnabled.asStateFlow()
+
+    private val _digestTime = MutableStateFlow(DigestTime(SettingsRepository.DEFAULT_DIGEST_HOUR, SettingsRepository.DEFAULT_DIGEST_MINUTE))
+    val digestTime: StateFlow<DigestTime> = _digestTime.asStateFlow()
+
     init {
         settingsRepository.correctionLearningEnabled
             .onEach { _correctionLearningEnabled.value = it }
             .launchIn(viewModelScope)
         settingsRepository.isPro
             .onEach { _isPro.value = it }
+            .launchIn(viewModelScope)
+        settingsRepository.digestsEnabled
+            .onEach { _digestsEnabled.value = it }
+            .launchIn(viewModelScope)
+        settingsRepository.digestTime
+            .onEach { _digestTime.value = it }
             .launchIn(viewModelScope)
 
         // Sweep once per app open — see NotificationRepository.enforceRetentionPolicy's doc
@@ -81,6 +95,23 @@ class NotificationViewModel(
             // waiting for the next app launch; upgrading is always a no-op here since the
             // retention sweep only ever deletes, never restores.
             repository.enforceRetentionPolicy()
+        }
+    }
+
+    /**
+     * Only persists the flag — [com.futurepath.actionbox.ActionBoxApplication] holds the
+     * reactive subscription that actually schedules/cancels the WorkManager jobs in response,
+     * so this doesn't need to know anything about WorkManager itself.
+     */
+    fun setDigestsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setDigestsEnabled(enabled)
+        }
+    }
+
+    fun setDigestTime(time: DigestTime) {
+        viewModelScope.launch {
+            settingsRepository.setDigestTime(time)
         }
     }
 
