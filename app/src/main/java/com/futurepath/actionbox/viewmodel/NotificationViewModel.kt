@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.ProductDetails
 import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.classification.ClassifiedState
+import com.futurepath.actionbox.data.AppLanguage
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.NotificationRepository
@@ -73,6 +74,9 @@ class NotificationViewModel(
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
+    private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM_DEFAULT)
+    val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
+
     /** The Pro subscription's product details, once Play Billing has loaded them — null until
      * then, which the paywall (ui/paywall/PaywallScreen) shows as a loading state. */
     val productDetails: StateFlow<ProductDetails?> = billingRepository.productDetails
@@ -111,6 +115,9 @@ class NotificationViewModel(
             .launchIn(viewModelScope)
         settingsRepository.themeMode
             .onEach { _themeMode.value = it }
+            .launchIn(viewModelScope)
+        settingsRepository.appLanguage
+            .onEach { _appLanguage.value = it }
             .launchIn(viewModelScope)
 
         // Sweep once per app open — see NotificationRepository.enforceRetentionPolicy's doc
@@ -210,6 +217,22 @@ class NotificationViewModel(
         viewModelScope.launch {
             settingsRepository.setThemeMode(mode)
         }
+    }
+
+    /**
+     * A plain `suspend` function — deliberately NOT wrapped in `viewModelScope.launch` the way
+     * every other setter above is. The caller (SettingsScreen's LanguageRow) needs to call
+     * [android.app.Activity.recreate] immediately after this actually finishes persisting, since
+     * that's the step that re-renders this app's own UI in the new language (via
+     * MainActivity.attachBaseContext re-running with the newly-persisted value). Firing-and-
+     * forgetting the persist here (like the other setters do) would race recreate() against the
+     * DataStore write, since the caller can't tell when a launched coroutine actually completes.
+     * The caller runs this in its own `rememberCoroutineScope()` and calls `recreate()` only
+     * after it returns.
+     */
+    suspend fun setAppLanguage(language: AppLanguage) {
+        settingsRepository.setAppLanguage(language)
+        language.syncToSystemLocaleRecord()
     }
 
     /** [sender] blank flags the whole [sourceApp] as VIP — see [VipSenderEntity]'s doc. */

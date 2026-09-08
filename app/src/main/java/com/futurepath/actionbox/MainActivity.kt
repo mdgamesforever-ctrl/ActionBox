@@ -1,5 +1,6 @@
 package com.futurepath.actionbox
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -19,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
+import com.futurepath.actionbox.data.localeAwareContext
 import com.futurepath.actionbox.service.NotificationAccessUtils
 import com.futurepath.actionbox.ui.MainScreen
 import com.futurepath.actionbox.ui.onboarding.PermissionOnboardingScreen
@@ -26,6 +28,19 @@ import com.futurepath.actionbox.ui.theme.ActionBoxTheme
 import com.futurepath.actionbox.viewmodel.NotificationViewModel
 
 class MainActivity : ComponentActivity() {
+
+    // Called by the platform BEFORE onCreate/setContent — the actual "applied before any UI
+    // renders" point the persisted language needs. Reads the stored choice synchronously
+    // (readAppLanguageBlocking) since attachBaseContext has no suspend equivalent to await, then
+    // wraps the base Context so every Resources lookup from here on (stringResource included)
+    // resolves against that locale — see AppLanguage's and localeAwareContext's docs for why this
+    // doesn't rely on AppCompatDelegate for the actual resource-localization step. Re-run on
+    // every recreate() (see SettingsScreen's LanguageRow), so a freshly-picked language takes
+    // effect immediately rather than only after the next cold start.
+    override fun attachBaseContext(newBase: Context) {
+        val language = SettingsRepository.readAppLanguageBlocking(newBase)
+        super.attachBaseContext(localeAwareContext(newBase, language))
+    }
 
     private val viewModel: NotificationViewModel by viewModels {
         NotificationViewModel.Factory(

@@ -3,10 +3,12 @@ package com.futurepath.actionbox
 import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Context
 import android.util.Log
 import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
+import com.futurepath.actionbox.data.localeAwareContext
 import com.futurepath.actionbox.diagnostics.CrashLogger
 import com.futurepath.actionbox.reminders.ReminderNotifications
 import com.futurepath.actionbox.reminders.ReminderScheduler
@@ -26,6 +28,15 @@ import kotlinx.coroutines.flow.onEach
 private const val TAG = "ActionBoxApplication"
 
 class ActionBoxApplication : Application() {
+
+    // Same reasoning as MainActivity.attachBaseContext — wrapping the Application's own base
+    // Context too (not just the Activity's) means every context derived from it, including the
+    // Context Glance hands the home screen widget's composables (see widget/ActionBoxWidget.kt),
+    // also resolves strings against the persisted language rather than only the in-app UI.
+    override fun attachBaseContext(base: Context) {
+        val language = SettingsRepository.readAppLanguageBlocking(base)
+        super.attachBaseContext(localeAwareContext(base, language))
+    }
 
     // Lives for the whole process — this is what keeps WorkManager's schedule in sync with the
     // digest settings for as long as the app process exists, not just while an Activity is
@@ -54,6 +65,13 @@ class ActionBoxApplication : Application() {
         // (including in the third-party init that follows) still leaves a diagnosable trail —
         // see CrashLogger's doc.
         CrashLogger.installGlobalHandler(this)
+
+        // Syncs the OS's own per-app language record (the "App language" row in system Settings
+        // on API 33+, powered by android:localeConfig) with our persisted choice — see
+        // AppLanguage's class doc for why this is a secondary, system-integration-only step and
+        // not what makes ActionBox's own UI actually render in the right language (attachBaseContext
+        // above already did that for this Context and every one derived from it).
+        SettingsRepository.readAppLanguageBlocking(this).syncToSystemLocaleRecord()
 
         ReminderNotifications.ensureChannels(this)
 

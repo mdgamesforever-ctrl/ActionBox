@@ -1,6 +1,7 @@
 package com.futurepath.actionbox.ui.settings
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -47,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +64,7 @@ import com.futurepath.actionbox.data.AppLanguage
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.ThemeMode
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -89,6 +92,8 @@ fun SettingsScreen(
     onDigestTimeChange: (DigestTime) -> Unit,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    appLanguage: AppLanguage,
+    onAppLanguageChange: suspend (AppLanguage) -> Unit,
     onOpenVipSenders: () -> Unit,
     onOpenWeeklyInsights: () -> Unit,
     onViewCrashLogClick: () -> Unit
@@ -168,7 +173,7 @@ fun SettingsScreen(
         SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
             ThemeModeRow(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
             RowDivider()
-            LanguageRow()
+            LanguageRow(appLanguage = appLanguage, onAppLanguageChange = onAppLanguageChange)
         }
 
         // Debug-only escape hatch for our own testing, since there's no Play Console listing
@@ -321,22 +326,32 @@ private fun formatThemeMode(mode: ThemeMode): String = when (mode) {
 /**
  * Settings -> Appearance -> Language — separate from and unrelated to [ThemeMode]: picking a
  * language here only changes ActionBox's own UI strings (see [AppLanguage]'s doc), never how
- * notifications are classified. [AppLanguage.apply] triggers an Activity recreate immediately
- * (the standard AppCompatDelegate.setApplicationLocales behavior), so [current] only needs to
- * hold what's already applied at first composition — the recreate itself is what actually
- * re-renders everything in the newly-selected language.
+ * notifications are classified.
+ *
+ * [appLanguage] is read from [com.futurepath.actionbox.viewmodel.NotificationViewModel]'s
+ * DataStore-backed StateFlow — the same pattern [themeMode] already uses — rather than queried
+ * fresh from [androidx.appcompat.app.AppCompatDelegate] on each composition the way an earlier
+ * version of this row did. That was the actual bug behind "shows System default again after
+ * navigating away and back": this destination's composition (and any `remember` state in it) is
+ * torn down and rebuilt on every Settings visit via Navigation Compose, so a locally-`remember`ed
+ * value had nothing durable backing it — the persisted DataStore value now does.
+ *
+ * Explicitly calls [Activity.recreate] after [onAppLanguageChange] — see MainActivity's
+ * `attachBaseContext` override, which is what actually re-renders this app's own UI in the newly
+ * selected language, and only re-runs on a real Activity recreation.
  */
 @Composable
-private fun LanguageRow() {
+private fun LanguageRow(appLanguage: AppLanguage, onAppLanguageChange: suspend (AppLanguage) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var current by remember { mutableStateOf(AppLanguage.current()) }
     val systemDefaultLabel = stringResource(R.string.settings_language_system_default)
+    val activity = LocalContext.current as? Activity
+    val scope = rememberCoroutineScope()
 
     Box {
         SettingsRow(
             icon = Icons.Filled.Language,
             title = stringResource(R.string.settings_row_language_title),
-            subtitle = if (current == AppLanguage.SYSTEM_DEFAULT) systemDefaultLabel else current.nativeName,
+            subtitle = if (appLanguage == AppLanguage.SYSTEM_DEFAULT) systemDefaultLabel else appLanguage.nativeName,
             trailing = { TrailingChevron() },
             onClick = { expanded = true }
         )
@@ -346,8 +361,18 @@ private fun LanguageRow() {
                     text = { Text(if (option == AppLanguage.SYSTEM_DEFAULT) systemDefaultLabel else option.nativeName) },
                     onClick = {
                         expanded = false
-                        current = option
-                        option.apply()
+                        if (option != appLanguage) {
+                            // recreate() only after onAppLanguageChange's suspend function
+                            // actually returns — i.e. after the DataStore write completes, not
+                            // just after it's scheduled — so MainActivity.attachBaseContext's
+                            // synchronous re-read on the recreated Activity sees the new value
+                            // rather than racing it. See NotificationViewModel.setAppLanguage's
+                            // doc for why this one setter isn't fire-and-forget like the others.
+                            scope.launch {
+                                onAppLanguageChange(option)
+                                activity?.recreate()
+                            }
+                        }
                     }
                 )
             }

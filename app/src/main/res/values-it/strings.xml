@@ -1,0 +1,174 @@
+<resources>
+    <string name="app_name">ActionBox</string>
+
+    <string name="onboarding_title">Consenti ad ActionBox di leggere le tue notifiche</string>
+    <string name="onboarding_body">ActionBox organizza le notifiche in arrivo (come messaggi WhatsApp, SMS ed e-mail) in elementi attuabili. Per farlo, ha bisogno del permesso di leggere il contenuto delle notifiche.\n\nIl contenuto delle tue notifiche resta su questo dispositivo e non viene mai caricato altrove: la classificazione avviene interamente sul dispositivo. (Il piano gratuito mostra annunci pubblicitari e gli acquisti Pro passano attraverso Google Play; nessuno dei due vede mai il contenuto delle tue notifiche.) Puoi revocare l\'accesso alle notifiche in qualsiasi momento dalle impostazioni di sistema.</string>
+    <string name="onboarding_grant_button">Apri impostazioni accesso notifiche</string>
+    <string name="onboarding_status_granted">L\'accesso alle notifiche è stato concesso. ActionBox sta acquisendo le notifiche.</string>
+    <string name="onboarding_status_not_granted">L\'accesso alle notifiche non è ancora stato concesso.</string>
+
+    <string name="feed_title">Notifiche acquisite</string>
+    <string name="feed_empty">Nessuna notifica acquisita finora. Genera una notifica da un\'altra app (WhatsApp, SMS, Gmail, ecc.) per vederla comparire qui.</string>
+
+    <string name="widget_label">ActionBox</string>
+    <string name="widget_description">Conteggio in tempo reale di ciò che richiede la tua attenzione — Azione, In attesa, Scadenza e Rispondi. Esclusivo per Pro.</string>
+    <string name="widget_upgrade_placeholder">Passa a Pro per aggiungere questo widget</string>
+    <string name="widget_load_error">Impossibile caricare — tocca per aprire ActionBox</string>
+
+    <!-- Category / tab names -->
+    <string name="tab_action">Azione</string>
+    <string name="tab_waiting">In attesa</string>
+    <string name="tab_deadline">Scadenza</string>
+    <string name="tab_reply">Rispondi</string>
+    <string name="tab_other">Altro</string>
+    <string name="tab_settings">Impostazioni</string>
+
+    <string name="category_action">AZIONE</string>
+    <string name="category_reply">RISPONDI</string>
+    <string name="category_waiting">IN ATTESA</string>
+    <string name="category_deadline">SCADENZA</string>
+    <string name="category_fyi">INFO</string>
+    <string name="category_noise">RUMORE</string>
+
+    <!-- Screen titles -->
+    <string name="title_upgrade_to_pro">Passa a Pro</string>
+    <string name="title_debug_feed">Feed di debug</string>
+    <string name="title_crash_log">Registro dei crash</string>
+    <string name="title_vip_senders">Mittenti VIP</string>
+    <string name="title_weekly_insights">Riepilogo settimanale</string>
+
+    <!-- Common actions -->
+    <string name="action_search">Cerca</string>
+    <string name="action_continue">Continua</string>
+    <string name="action_undo">Annulla</string>
+    <string name="action_cancel">Annulla</string>
+    <string name="action_add">Aggiungi</string>
+    <string name="action_remove">Rimuovi</string>
+    <string name="action_copy">Copia</string>
+    <string name="action_share">Condividi</string>
+    <string name="action_manage">Gestisci</string>
+    <string name="action_upgrade">Passa a Pro</string>
+    <string name="action_try_again">Riprova</string>
+    <string name="action_subscribe">Abbonati</string>
+    <string name="action_continue_with_free">Continua con la versione gratuita</string>
+    <string name="action_mark_handled">Contrassegna come gestito</string>
+    <string name="action_snooze">Posticipa</string>
+    <string name="action_show_more">Mostra di più</string>
+    <string name="action_show_less">Mostra di meno</string>
+    <string name="state_on">Attivo</string>
+    <string name="state_off">Disattivo</string>
+
+    <!-- Notification card -->
+    <string name="label_summary_prefix">Riepilogo: %1$s</string>
+    <string name="label_needs_review">⚠ Da rivedere — affidabilità bassa (%1$d%%)</string>
+    <string name="label_not_sure">❓ Non sei sicuro? — tocca per verificare (%1$d%%)</string>
+    <string name="label_corrected">(corretto)</string>
+    <string name="toast_copied">\"%1$s\" copiato</string>
+
+    <!-- Search -->
+    <string name="search_field_label">Cerca per mittente o messaggio</string>
+    <string name="search_empty_prompt">Cerca tra tutte le notifiche salvate, indipendentemente dalla categoria o dall\'app.</string>
+    <string name="search_no_matches">Nessun risultato per \"%1$s\".</string>
+
+    <!-- Category inbox -->
+    <string name="snackbar_marked_handled">Contrassegnato come gestito</string>
+    <string name="snackbar_snoozed_until">Posticipato fino a %1$s</string>
+    <string name="dialog_snooze_until_title">Posticipa fino a…</string>
+    <string name="snooze_one_hour">1 ora</string>
+    <string name="snooze_tomorrow">Domani</string>
+    <string name="snooze_next_week">Prossima settimana</string>
+    <string name="empty_inbox_action">Al momento nulla richiede un\'azione.</string>
+    <string name="empty_inbox_waiting">Al momento non c\'è nulla in attesa.</string>
+    <string name="empty_inbox_deadline">Nessuna scadenza imminente.</string>
+    <string name="empty_inbox_reply">Nessun messaggio in attesa di risposta.</string>
+    <string name="empty_inbox_other">Niente qui — gli avvisi informativi e il rumore compariranno in questa scheda.</string>
+
+    <!-- Crash log -->
+    <string name="crash_log_share_chooser_title">Condividi registro dei crash</string>
+    <string name="crash_log_none_recorded">Non è stato registrato alcun crash da quando questa app è stata installata (o da quando i suoi dati sono stati cancellati l\'ultima volta).</string>
+    <string name="crash_log_downloads_note">Una copia di ogni crash registrato viene salvata anche direttamente nella cartella Download del tuo telefono (come ActionBox_crash_&lt;timestamp&gt;.txt) — aprila con un qualsiasi gestore di file se preferisci non usare Copia/Condividi qui sotto.</string>
+
+    <!-- VIP senders -->
+    <string name="vip_add_action">Aggiungi VIP</string>
+    <string name="vip_screen_subtitle">Le notifiche di un mittente o di un\'app VIP finiscono sempre in Azione, indipendentemente da ciò che sceglierebbe normalmente il classificatore.</string>
+    <string name="vip_empty_state">Nessun VIP ancora — tocca + per aggiungere un mittente o un\'app.</string>
+    <string name="vip_entire_app">Intera app</string>
+    <string name="vip_add_dialog_title">Aggiungi VIP</string>
+    <string name="vip_add_dialog_no_notifications">Nessuna notifica acquisita finora — i VIP vengono scelti tra le app e i mittenti da cui hai già ricevuto notifiche.</string>
+    <string name="vip_add_dialog_app_label">App</string>
+    <string name="vip_add_dialog_sender_label">Mittente (facoltativo — vuoto = intera app)</string>
+
+    <!-- Paywall -->
+    <string name="paywall_subtitle">Sblocca cronologia illimitata, una casella senza pubblicità e una classificazione più intelligente.</string>
+    <string name="paywall_billing_unavailable">La fatturazione di Google Play non è disponibile al momento. Controlla la connessione e riprova.</string>
+    <string name="paywall_unlimited">Illimitata</string>
+    <string name="paywall_feature_history">Cronologia notifiche</string>
+    <string name="paywall_feature_ad_free">Esperienza senza pubblicità</string>
+    <string name="paywall_feature_smart_corrections">Correzioni intelligenti</string>
+    <string name="paywall_feature_widget">Widget schermata Home</string>
+    <string name="paywall_feature_vip">Priorità VIP</string>
+    <string name="paywall_feature_weekly_insights">Rapporto settimanale</string>
+    <string name="paywall_feature_smart_reply">Suggerimenti di risposta intelligente</string>
+    <string name="paywall_feature_core_inbox">Posta in arrivo e notifiche di base</string>
+    <string name="paywall_column_feature">Funzione</string>
+    <string name="paywall_column_free">Gratis</string>
+    <string name="paywall_column_pro">Pro</string>
+    <string name="paywall_included">Incluso</string>
+    <string name="paywall_not_included">Non incluso</string>
+    <string name="paywall_price_per_period">%1$s / %2$s</string>
+    <string name="paywall_period_week">settimana</string>
+    <string name="paywall_period_month">mese</string>
+    <string name="paywall_period_3_months">3 mesi</string>
+    <string name="paywall_period_6_months">6 mesi</string>
+    <string name="paywall_period_year">anno</string>
+
+    <!-- Settings -->
+    <string name="settings_section_plan">Piano</string>
+    <string name="settings_row_plan_title">Piano</string>
+    <string name="settings_plan_subtitle_pro">Pro — cronologia illimitata, senza pubblicità</string>
+    <string name="settings_plan_subtitle_free">Gratis — cronologia di %1$d giorni, con pubblicità</string>
+    <string name="settings_section_smart_corrections">Correzioni intelligenti</string>
+    <string name="settings_row_learn_corrections_title">Impara dalle mie correzioni</string>
+    <string name="settings_row_learn_corrections_subtitle">Classifica messaggi simili nel modo in cui li hai corretti</string>
+    <string name="settings_section_vip_senders">Mittenti VIP</string>
+    <string name="settings_row_vip_senders_title">Mittenti VIP</string>
+    <string name="settings_row_vip_senders_subtitle">Instrada sempre mittenti/app contrassegnati verso Azione</string>
+    <string name="settings_section_weekly_insights">Riepilogo settimanale</string>
+    <string name="settings_row_weekly_insights_title">Riepilogo settimanale</string>
+    <string name="settings_row_weekly_insights_subtitle">Volume, ripartizione per categoria ed elementi IN ATTESA non aggiornati</string>
+    <string name="settings_section_reminders">Promemoria</string>
+    <string name="settings_row_digest_title">Riepilogo giornaliero e promemoria di attesa</string>
+    <string name="settings_row_digest_time_title">Orario del riepilogo</string>
+    <string name="settings_section_appearance">Aspetto</string>
+    <string name="settings_row_theme_title">Tema</string>
+    <string name="theme_system">Sistema</string>
+    <string name="theme_light">Chiaro</string>
+    <string name="theme_dark">Scuro</string>
+    <string name="settings_row_language_title">Lingua</string>
+    <string name="settings_language_system_default">Predefinita di sistema</string>
+    <string name="settings_section_debug_tools">Strumenti di debug</string>
+    <string name="settings_row_simulate_pro_title">Simula Pro</string>
+    <string name="settings_row_simulate_pro_subtitle">Nessun acquisto reale — solo per test</string>
+    <string name="settings_row_crash_log_title">Visualizza ultimo registro crash</string>
+    <string name="settings_pro_chip">PRO</string>
+
+    <!-- Weekly insights -->
+    <string name="insights_not_enough_data">Non ci sono ancora abbastanza dati — ricontrolla dopo la tua prima settimana di utilizzo di ActionBox.</string>
+    <string name="insights_this_week">Questa settimana</string>
+    <string name="insights_by_category">Per categoria</string>
+    <string name="insights_still_waiting">Ancora in attesa</string>
+    <string name="insights_nothing_stale">Nulla di irrisolto da più di 5 giorni — ottimo.</string>
+
+    <plurals name="insights_notifications_captured">
+        <item quantity="one">%1$d notifica acquisita</item>
+        <item quantity="other">%1$d notifiche acquisite</item>
+    </plurals>
+    <plurals name="insights_stale_waiting_count">
+        <item quantity="one">%1$d elemento ancora irrisolto da oltre 5 giorni.</item>
+        <item quantity="other">%1$d elementi ancora irrisolti da oltre 5 giorni.</item>
+    </plurals>
+    <plurals name="paywall_retention_days">
+        <item quantity="one">%1$d giorno</item>
+        <item quantity="other">%1$d giorni</item>
+    </plurals>
+</resources>

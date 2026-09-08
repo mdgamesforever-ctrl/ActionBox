@@ -84,6 +84,7 @@ fun MainScreen(
     val digestsEnabled by viewModel.digestsEnabled.collectAsStateWithLifecycle()
     val digestTime by viewModel.digestTime.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val productDetails by viewModel.productDetails.collectAsStateWithLifecycle()
     val billingUnavailable by viewModel.billingUnavailable.collectAsStateWithLifecycle()
     val vipSenders by viewModel.vipSenders.collectAsStateWithLifecycle()
@@ -217,6 +218,8 @@ fun MainScreen(
                     onDigestTimeChange = viewModel::setDigestTime,
                     themeMode = themeMode,
                     onThemeModeChange = viewModel::setThemeMode,
+                    appLanguage = appLanguage,
+                    onAppLanguageChange = viewModel::setAppLanguage,
                     onOpenVipSenders = { navController.navigate(VIP_SENDERS_ROUTE) },
                     onOpenWeeklyInsights = { navController.navigate(WEEKLY_INSIGHTS_ROUTE) },
                     onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) }

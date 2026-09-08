@@ -2,9 +2,10 @@
 <!-- Declares which languages ActionBox ships translations for, so on API 33+ the system's own
      Settings -> Apps -> ActionBox -> Language screen lists the same 10 languages as the in-app
      picker (Settings -> Appearance -> Language, see data/AppLanguage.kt) instead of just
-     whatever the device's default locale happens to be. Picking a language from either surface
-     goes through the same AppCompatDelegate.setApplicationLocales mechanism, so they always stay
-     in sync. -->
+     whatever the device's default locale happens to be. This is purely for that system-settings
+     listing; it's SettingsRepository's DataStore-backed value, not this file or
+     AppCompatDelegate, that actually drives what language ActionBox's own UI renders in — see
+     AppLanguage's class doc. -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
     <locale android:name="en" />
     <locale android:name="ar" />
@@ -12,7 +13,7 @@
     <locale android:name="fr" />
     <locale android:name="de" />
     <locale android:name="pt" />
-    <locale android:name="hi" />
+    <locale android:name="it" />
     <locale android:name="tr" />
     <locale android:name="in" />
     <locale android:name="ur" />

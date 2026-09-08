@@ -10,7 +10,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "actionbox_settings")
 
@@ -120,6 +122,23 @@ class SettingsRepository(context: Context) {
         dataStore.edit { prefs -> prefs[THEME_MODE] = mode.name }
     }
 
+    /**
+     * The user's chosen UI language — defaults to following the system setting. Stored by enum
+     * name, same reasoning as [themeMode]. This is ActionBox's OWN, fully-owned source of truth
+     * for the selection (see [AppLanguage]'s doc for why this replaced querying
+     * [androidx.appcompat.app.AppCompatDelegate.getApplicationLocales] directly: that reads
+     * transient in-process state that isn't reliably restored across process death without the
+     * app declaring AppCompat's own opt-in auto-storage service, which this app never did —
+     * DataStore is a single, always-correct, directly-testable source of truth instead).
+     */
+    val appLanguage: Flow<AppLanguage> = dataStore.data.map { prefs ->
+        resolveAppLanguage(prefs[APP_LANGUAGE])
+    }.distinctUntilChanged()
+
+    suspend fun setAppLanguage(language: AppLanguage) {
+        dataStore.edit { prefs -> prefs[APP_LANGUAGE] = language.name }
+    }
+
     companion object {
         private val CORRECTION_LEARNING_ENABLED = booleanPreferencesKey("correction_learning_enabled")
         private val IS_PRO = booleanPreferencesKey("is_pro")
@@ -127,6 +146,17 @@ class SettingsRepository(context: Context) {
         private val DIGEST_HOUR = intPreferencesKey("digest_hour")
         private val DIGEST_MINUTE = intPreferencesKey("digest_minute")
         private val THEME_MODE = stringPreferencesKey("theme_mode")
+        private val APP_LANGUAGE = stringPreferencesKey("app_language")
+
+        /**
+         * Reads the persisted language synchronously — needed at the earliest possible startup
+         * points ([ActionBoxApplication.attachBaseContext]/[MainActivity.attachBaseContext],
+         * which the platform calls synchronously and can't await a suspend function) so the
+         * correct locale is applied before any UI inflates, rather than flashing System default
+         * first and then jumping to the real language a frame later.
+         */
+        fun readAppLanguageBlocking(context: Context): AppLanguage =
+            runBlocking { getInstance(context).appLanguage.first() }
 
         const val DEFAULT_DIGEST_HOUR = 9
         const val DEFAULT_DIGEST_MINUTE = 0
