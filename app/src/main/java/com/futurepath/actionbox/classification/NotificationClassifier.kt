@@ -1,5 +1,7 @@
 package com.futurepath.actionbox.classification
 
+import java.util.regex.Pattern
+
 /** Result of classifying one captured notification. */
 data class ClassificationResult(
     val state: ClassifiedState,
@@ -171,7 +173,9 @@ object NotificationClassifier {
         // pattern this safeguard was built for.
         val hasDueLanguage = DUE_PATTERNS.any { it.containsMatchIn(lowerText) } ||
             BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
-            BARE_BEFORE_PATTERN.containsMatchIn(lowerText)
+            BARE_BEFORE_PATTERN.containsMatchIn(lowerText) ||
+            ARABIC_BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || ARABIC_BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
+            ARABIC_BARE_BEFORE_PATTERN.containsMatchIn(lowerText)
         if (hasDueLanguage) return false
         return baseScores.filterKeys { it != ClassifiedState.DEADLINE }.values.all { it == 0 }
     }
@@ -365,8 +369,10 @@ object NotificationClassifier {
         // <time>" trigger, not an explicit due/expiry word, so "should arrive by the
         // deadline" still correctly scores DEADLINE via DUE_PATTERNS.
         val deliveryCommitment = DEADLINE_SUPPRESSED_BY_DELIVERY_COMMITMENT.containsMatchIn(lowerText)
-        val byDeadlineHit = !deliveryCommitment && BY_DEADLINE_PATTERN.containsMatchIn(lowerText)
-        val beforeDeadlineHit = !deliveryCommitment && BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText)
+        val byDeadlineHit = !deliveryCommitment &&
+            (BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || ARABIC_BY_DEADLINE_PATTERN.containsMatchIn(lowerText))
+        val beforeDeadlineHit = !deliveryCommitment &&
+            (BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) || ARABIC_BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText))
         // A bare "before" with no anchored day/date/time (see BEFORE_DEADLINE_PATTERN for the
         // anchored case) is an ordinary subordinating conjunction — "clean the desk before you
         // leave", "double check the numbers before sending" — that appears constantly in
@@ -375,7 +381,8 @@ object NotificationClassifier {
         // day-name mention below (see the dueMatches==0 branch), rather than the full DUE_WEIGHT
         // credit it used to get unconditionally, which tied or beat a genuine ACTION/WAITING
         // signal on exactly this class of sentence.
-        val hasBareBefore = !beforeDeadlineHit && BARE_BEFORE_PATTERN.containsMatchIn(lowerText)
+        val hasBareBefore = !beforeDeadlineHit &&
+            (BARE_BEFORE_PATTERN.containsMatchIn(lowerText) || ARABIC_BARE_BEFORE_PATTERN.containsMatchIn(lowerText))
         // Tracked separately from byDeadlineHit/beforeDeadlineHit: an explicit due/expiry WORD
         // ("due", "cutoff", "expires"...) is a much stronger, less generic signal than the bare
         // "by/before <time>" trigger — see below for why that distinction matters for the
@@ -394,7 +401,8 @@ object NotificationClassifier {
             // pattern set (day names + a few relative phrases), not DEADLINE_COMBO_DATE_PATTERNS'
             // broader one below — "today"/"tomorrow"/time-of-day are far too common in ordinary
             // non-deadline sentences to trust as a standalone trigger on their own.
-            val dateMatches = DEADLINE_STANDALONE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+            val dateMatches = (DEADLINE_STANDALONE_DATE_PATTERNS + ARABIC_DEADLINE_STANDALONE_DATE_PATTERNS)
+                .count { it.containsMatchIn(lowerText) }
             val bareBeforeWeight = if (hasBareBefore) STANDALONE_DATE_WEIGHT else 0
             return dateMatches * STANDALONE_DATE_WEIGHT + bareBeforeWeight
         }
@@ -413,9 +421,9 @@ object NotificationClassifier {
         // recognized these for display; scoring previously didn't credit them at all).
         val hasStrongDueWord = STRONG_DUE_PATTERNS.any { it.containsMatchIn(lowerText) }
         val dateMatches = if (hasStrongDueWord) {
-            DEADLINE_COMBO_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+            (DEADLINE_COMBO_DATE_PATTERNS + ARABIC_DEADLINE_COMBO_DATE_PATTERNS).count { it.containsMatchIn(lowerText) }
         } else {
-            DEADLINE_STANDALONE_DATE_PATTERNS.count { it.containsMatchIn(lowerText) }
+            (DEADLINE_STANDALONE_DATE_PATTERNS + ARABIC_DEADLINE_STANDALONE_DATE_PATTERNS).count { it.containsMatchIn(lowerText) }
         }
         var total = dueMatches * DUE_WEIGHT + dateMatches * DATE_WEIGHT
         if (dateMatches > 0) total += COMBO_BONUS
@@ -442,6 +450,23 @@ object NotificationClassifier {
                 }
             }
         }
+        // Arabic request verbs (MSA + Jordanian/Levantine colloquial) — see ARABIC_ACTION_VERBS'
+        // doc. No suppression map exists for these yet (unlike ACTION_VERB_SUPPRESSED_BY above),
+        // since none of the curated Arabic surface forms below collide with a specific REPLY/
+        // WAITING idiom the way English "call"/"check"/"confirm" do.
+        for (verb in ARABIC_ACTION_VERBS) {
+            val suppressedBy = ARABIC_ACTION_VERB_SUPPRESSED_BY[verb.word]
+            if (suppressedBy != null && suppressedBy.containsMatchIn(lowerText)) {
+                continue
+            }
+            if (verb.bare.containsMatchIn(lowerText)) {
+                verbHit = true
+                total += ACTION_VERB_WEIGHT
+                if (verb.directed.containsMatchIn(lowerText)) {
+                    total += ACTION_DIRECTED_BONUS
+                }
+            }
+        }
         if (verbHit && REQUEST_MARKERS.any { it.containsMatchIn(lowerText) }) {
             total += ACTION_REQUEST_MARKER_BONUS
             // A request explicitly directed at the recipient ("can you...", "kindly...",
@@ -454,6 +479,7 @@ object NotificationClassifier {
             // before <date>" combo score rather than losing to it the way a bare imperative
             // does.
             if (BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
+                ARABIC_BY_DEADLINE_PATTERN.containsMatchIn(lowerText) || ARABIC_BEFORE_DEADLINE_PATTERN.containsMatchIn(lowerText) ||
                 DUE_PATTERNS.any { it.containsMatchIn(lowerText) }
             ) {
                 total += ACTION_REQUEST_WITH_DEADLINE_BONUS
@@ -464,7 +490,8 @@ object NotificationClassifier {
 
     private fun score(text: String, patterns: List<Regex>): Int = patterns.count { it.containsMatchIn(text) } * DEFAULT_WEIGHT
 
-    private fun extractDate(text: String): String? = EXTRACT_DATE_PATTERN.find(text)?.value
+    private fun extractDate(text: String): String? =
+        EXTRACT_DATE_PATTERN.find(text)?.value ?: ARABIC_EXTRACT_DATE_PATTERN.find(text)?.value
 
     /**
      * Picks the sentence/clause containing the strongest signal (a verb, request marker, or
@@ -472,15 +499,21 @@ object NotificationClassifier {
      * sender + a truncated excerpt when no clause with a clear signal is found.
      */
     private fun extractSummary(text: String, sender: String): String {
-        val clauses = text.split(Regex("[.!?\n]+")).map { it.trim() }.filter { it.isNotEmpty() }
+        // "؟" (the Arabic question mark) is added to the clause-splitter alongside the ASCII
+        // sentence terminators so an Arabic-only notification's clauses break the same way an
+        // English one's do — casual Arabic texting almost never uses the ASCII "?" instead.
+        val clauses = text.split(Regex("[.!?\n؟]+")).map { it.trim() }.filter { it.isNotEmpty() }
         val candidate = clauses.firstOrNull { clause ->
             val lower = clause.lowercase()
             ACTION_VERBS.any { it.bare.containsMatchIn(lower) } ||
+                ARABIC_ACTION_VERBS.any { it.bare.containsMatchIn(lower) } ||
                 REQUEST_MARKERS.any { it.containsMatchIn(lower) } ||
                 WAITING_PATTERNS.any { it.containsMatchIn(lower) } ||
                 DUE_PATTERNS.any { it.containsMatchIn(lower) } ||
                 BY_DEADLINE_PATTERN.containsMatchIn(lower) ||
-                DEADLINE_COMBO_DATE_PATTERNS.any { it.containsMatchIn(lower) }
+                ARABIC_BY_DEADLINE_PATTERN.containsMatchIn(lower) ||
+                DEADLINE_COMBO_DATE_PATTERNS.any { it.containsMatchIn(lower) } ||
+                ARABIC_DEADLINE_COMBO_DATE_PATTERNS.any { it.containsMatchIn(lower) }
         } ?: clauses.firstOrNull()
 
         val base = candidate ?: (if (sender.isNotBlank()) "$sender: $text" else text)
@@ -661,6 +694,13 @@ object NotificationClassifier {
         // single all-caps or near-all-caps attention word, distinct from an ordinary excited
         // sentence because it's the word ALONE (not part of a longer imperative).
         Regex("\\b(?:winner|urgent|congratulations)!!", RegexOption.IGNORE_CASE)
+    ) + arabicPhrases(
+        // MSA + Levantine promotional/marketing phrasing (see the Arabic pattern coverage
+        // section at the bottom of this file for why these go through arabicPhrases() rather
+        // than phrases()).
+        "خصم", "عرض خاص", "عرض لفترة محدودة", "مجاني", "احجز الآن", "احجز الان", "كوبون",
+        "تخفيضات", "اشتري الآن", "اشتري الان", "لا تفوت الفرصة", "عرض حصري", "مبروك ربحت",
+        "فزت بجائزة", "اضغط هنا"
     )
 
     private val FYI_PATTERNS = phrases(
@@ -673,6 +713,10 @@ object NotificationClassifier {
         // completion-status notifications weren't covered by any existing phrase.
         "package delivered", "was delivered", "download complete", "download finished",
         "installation complete", "update installed"
+    ) + arabicPhrases(
+        "تم الشحن", "تم التوصيل", "تم استلام طلبك", "تم الدفع بنجاح", "رمز التحقق", "رمز التأكيد",
+        "رمز التاكيد", "تم تأكيد الحجز", "تم تاكيد الحجز", "تم تسليم الطلب", "وصلت الطلبية",
+        "تم تنفيذ العملية بنجاح"
     )
 
     // "before" is deliberately NOT included here — unlike "due"/"expires"/"deadline", it's an
@@ -681,10 +725,19 @@ object NotificationClassifier {
     // signal when actually anchored to a day/date/time (BEFORE_DEADLINE_PATTERN below, mirroring
     // BY_DEADLINE_PATTERN); an unanchored "before" gets the weaker, standalone-level treatment
     // in scoreDeadline instead (see hasBareBefore there).
+    // Arabic strong due/expiry words shared by DUE_PATTERNS and STRONG_DUE_PATTERNS below — "حتى"
+    // and "قبل" are deliberately NOT included here (they're as generic as English "by"/"before"
+    // unless anchored to a date — see ARABIC_BY_DEADLINE_PATTERN/ARABIC_BEFORE_DEADLINE_PATTERN
+    // at the bottom of this file).
+    private val ARABIC_DUE_PATTERNS = arabicPhrases(
+        "آخر موعد", "اخر موعد", "الموعد النهائي", "ينتهي", "تنتهي", "مهلة", "اخر يوم", "آخر يوم",
+        "تاريخ الانتهاء", "صلاحية العرض تنتهي"
+    )
+
     private val DUE_PATTERNS = phrases(
         "due", "expires", "expiring", "deadline",
         "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
-    )
+    ) + ARABIC_DUE_PATTERNS
 
     // Same list as DUE_PATTERNS now that "before" has its own anchored/unanchored handling —
     // kept as a separate named list since scoreDeadline's dateMatches gate documents its intent
@@ -692,7 +745,7 @@ object NotificationClassifier {
     private val STRONG_DUE_PATTERNS = phrases(
         "due", "expires", "expiring", "deadline",
         "last day", "final date", "closing date", "cutoff", "renewal", "ends on"
-    )
+    ) + ARABIC_DUE_PATTERNS
 
     // Shared date/day/time alternation anchoring both BY_DEADLINE_PATTERN and
     // BEFORE_DEADLINE_PATTERN — "by"/"before" alone are both too generic (fire on "by the way",
@@ -926,6 +979,9 @@ object NotificationClassifier {
     ) + listOf(
         Regex("\\bwhen you get a (?:chance|sec|second|minute|moment)\\b"),
         Regex("\\bat your convenience\\b")
+    ) + arabicPhrases(
+        "ممكن", "لو سمحت", "لو سمحتي", "من فضلك", "من فضلكي", "محتاج", "محتاجة", "بدي", "بدك",
+        "عطيني", "عطني", "ياريت"
     )
 
     private val WAITING_PATTERNS: List<Regex> = phrases(
@@ -1028,7 +1084,17 @@ object NotificationClassifier {
         // EVERY ACTION_VERBS word (not just call/send/check/confirm) so any future-commitment-
         // framed request verb ("fixing to review it now", "going to go pick that up") reads as
         // WAITING the same way.
-        ACTION_VERBS.map { Regex(futureCommitmentPattern(it.word)) }
+        ACTION_VERBS.map { Regex(futureCommitmentPattern(it.word)) } +
+        // Arabic/Levantine waiting-and-pending phrasing — "جاري المراجعة"/"قيد الانتظار" are the
+        // formal/automated "under review"/"pending" idioms named in the spec; "لسا"/"لسه"
+        // ("still")/"عم اشتغل عليها" ("I'm working on it")/"راح ارجعلك"/"هرجعلك" ("I'll get back
+        // to you") are the casual Jordanian equivalents of "i'll get back to you"/"working on
+        // it" above.
+        arabicPhrases(
+            "جاري المراجعة", "قيد الانتظار", "قيد المعالجة", "جاري التنفيذ", "جاري التحقق",
+            "لسا", "لسه", "عم اشتغل عليها", "راح ارجعلك", "هرجعلك", "خليني اتأكد", "لحظة",
+            "ثانية واحدة", "بعطيك خبر", "تم الاستلام وجاري المراجعة"
+        )
 
     private val REPLY_PATTERNS = phrases(
         "let me know", "lmk", "tell me", "get back to me", "call me", "text me", "hmu",
@@ -1054,6 +1120,20 @@ object NotificationClassifier {
         Regex("\\bmake sense\\b"),
         // "u good?"/"u there?" normalize to "you good"/"you there" via TextNormalizer.
         Regex("\\byou (?:good|there)\\b")
+    ) + arabicPhrases(
+        // MSA + Levantine reply-seeking phrasing: "خبرني"/"خبريني" ("tell me", masc/fem-
+        // addressed), "قلي" ("tell me", colloquial contraction of "قل لي"), "شو رأيك"/"شو رايك"
+        // ("what do you think"), "فيه/في حدا" ("is anyone there" — Levantine "حدا" = "anyone").
+        "خبرني", "خبريني", "قلي", "رد علي", "ردي علي", "شو رأيك", "شو رايك", "في اخبار",
+        "فيه اخبار", "شفت الرسالة", "وصلتك الرسالة", "لسا مستني رد", "فيه حدا", "في حدا",
+        "انت موجود", "انتي موجودة", "شو الوضع", "ماشي الحال", "باقي منتظر ردك"
+    ) + listOf(
+        // A bare Arabic question mark — real casual Arabic texting almost never uses the ASCII
+        // "?", so without this an Arabic question with no other REPLY-phrase match (e.g. "متى
+        // بترجع؟") would score 0 everywhere and fall through to FYI. NOISE's own patterns still
+        // win a tie against this (see TIE_BREAK_ORDER), so a promotional message phrased as a
+        // question ("خصم 50%؟") still correctly lands on NOISE rather than REPLY.
+        Regex("؟")
     )
 
     // Broader than DEADLINE_STANDALONE_DATE_PATTERNS — used only to populate extractedDate, not scoring.
@@ -1063,5 +1143,132 @@ object NotificationClassifier {
             "january|february|march|april|may|june|july|august|september|october|november|december|" +
             "\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?|\\d{1,2}(?::\\d{2})?\\s?(?:am|pm)|\\d{1,2}(?:st|nd|rd|th))\\b",
         RegexOption.IGNORE_CASE
+    )
+
+    // ---- Arabic (Modern Standard + Jordanian/Levantine colloquial) pattern coverage --------
+    //
+    // Kotlin's \b/\w in a plain Regex(...) are ASCII-only by default — verified directly against
+    // the real java.util.regex engine this runs on (a throwaway jshell check): Pattern.compile(
+    // "\\w").matcher("ع").find() is false, and Pattern.compile("\\bعندي\\b") fails to find
+    // "عندي" in "مرحبا عندي سؤال" at all — UNLESS Pattern.UNICODE_CHARACTER_CLASS is enabled,
+    // which makes both \w and \b use their real Unicode definitions instead of the
+    // English-only shortcut. Every phrases()-built English Regex above relies on \b, so bolting
+    // Arabic literals onto that unchanged helper would compile fine and then silently never
+    // match a single real notification — this is why every Arabic pattern below goes through
+    // arabicPhrases()/arabicPattern() instead, and why they're kept as separate constants
+    // rather than merged into the ASCII-only English ones above.
+    private fun arabicPattern(pattern: String): Regex = Pattern.compile(pattern, Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+
+    private fun arabicPhrases(vararg raw: String): List<Regex> = raw.map { arabicPattern("\\b${Regex.escape(it)}\\b") }
+
+    // Day/date/relative-time words shared by the Arabic "حتى/قبل + anchor" mirrors of
+    // BY_DEADLINE_PATTERN/BEFORE_DEADLINE_PATTERN below — mirrors DEADLINE_ANCHOR_DATES' own
+    // rationale: a bare "حتى"/"قبل" is exactly as generic as English "by"/"before" ("حتى الآن" =
+    // "until now", "قبل ما" = "before ...") to trust as a deadline signal without being anchored
+    // to an actual day/date/time. Includes common Levantine/Jordanian colloquial relative-day
+    // words (بكرا/بكره/غدا all mean "tomorrow") alongside MSA month names.
+    private const val ARABIC_DEADLINE_ANCHOR_DATES =
+        "(?:يوم\\s+)?(الاثنين|الثلاثاء|الأربعاء|الاربعاء|الخميس|الجمعة|السبت|الأحد|الاحد|" +
+            "اليوم|الليلة|بكرا|بكره|غدا|منتصف الليل|الظهر|نهاية (?:ال)?شهر|نهاية (?:ال)?اسبوع|" +
+            "الأسبوع الجاي|الاسبوع الجاي|" +
+            "يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر|" +
+            "الساعة\\s?\\d{1,2}(?::\\d{2})?|\\d{1,2}/\\d{1,2})"
+
+    // "حتى الجمعة" ("until Friday") — the Arabic mirror of BY_DEADLINE_PATTERN.
+    private val ARABIC_BY_DEADLINE_PATTERN = arabicPattern("\\bحتى\\s+$ARABIC_DEADLINE_ANCHOR_DATES")
+
+    // "قبل بكرا" ("before tomorrow") — the Arabic mirror of BEFORE_DEADLINE_PATTERN.
+    private val ARABIC_BEFORE_DEADLINE_PATTERN = arabicPattern("\\bقبل\\s+$ARABIC_DEADLINE_ANCHOR_DATES")
+
+    // The weak, unanchored form — mirrors BARE_BEFORE_PATTERN ("قبل" alone, e.g. "خلص الشغل قبل
+    // ما تروح" = "finish the work before you go", an ordinary subordinating use with no deadline
+    // intent at all).
+    private val ARABIC_BARE_BEFORE_PATTERN = arabicPattern("\\bقبل\\b")
+
+    // Bare day-name/relative-phrase mentions, weak on their own — the Arabic mirror of
+    // DEADLINE_STANDALONE_DATE_PATTERNS.
+    private val ARABIC_DEADLINE_STANDALONE_DATE_PATTERNS: List<Regex> = arabicPhrases(
+        "الاثنين", "الثلاثاء", "الأربعاء", "الاربعاء", "الخميس", "الجمعة", "السبت", "الأحد", "الاحد",
+        "الأسبوع الجاي", "الاسبوع الجاي"
+    ) + listOf(
+        arabicPattern("نهاية (?:ال)?شهر"),
+        arabicPattern("نهاية (?:ال)?اسبوع")
+    )
+
+    // Broader set that only strengthens a deadline already established by a strong due/expiry
+    // word — the Arabic mirror of DEADLINE_COMBO_DATE_PATTERNS.
+    private val ARABIC_DEADLINE_COMBO_DATE_PATTERNS: List<Regex> = ARABIC_DEADLINE_STANDALONE_DATE_PATTERNS +
+        arabicPhrases(
+            "اليوم", "بكرا", "بكره", "غدا", "الليلة", "منتصف الليل", "الظهر",
+            "يناير", "فبراير", "مارس", "أبريل", "ابريل", "مايو", "يونيو", "يوليو",
+            "أغسطس", "اغسطس", "سبتمبر", "أكتوبر", "اكتوبر", "نوفمبر", "ديسمبر"
+        ) + listOf(
+            arabicPattern("الساعة\\s?\\d{1,2}(?::\\d{2})?")
+        )
+
+    // Used only to populate extractedDate for an Arabic-only deadline — the Arabic mirror of
+    // EXTRACT_DATE_PATTERN.
+    private val ARABIC_EXTRACT_DATE_PATTERN = arabicPattern(
+        "\\b(الاثنين|الثلاثاء|الأربعاء|الاربعاء|الخميس|الجمعة|السبت|الأحد|الاحد|اليوم|بكرا|بكره|غدا|الليلة|" +
+            "منتصف الليل|الظهر|نهاية (?:ال)?شهر|نهاية (?:ال)?اسبوع|الأسبوع الجاي|الاسبوع الجاي|" +
+            "يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر|" +
+            "الساعة\\s?\\d{1,2}(?::\\d{2})?)\\b"
+    )
+
+    // Common Jordanian/Levantine request verbs, MSA + colloquial surface forms listed side by
+    // side (e.g. MSA "أرسل"/"ارسل" next to colloquial "ابعت"/"ابعتلي"). Arabic morphology doesn't
+    // inflect by a simple suffix the way English does (contrast ACTION_VERB_SUFFIX_OVERRIDES),
+    // so each realistic surface form actually seen in casual texting is listed explicitly
+    // instead — consistent with this object's own "curated v1 heuristic, not a generative
+    // pipeline" philosophy (see the class doc at the top of this file). [directed] checks for a
+    // following "لي"/"لنا"/"إلي"/"الي" ("to me"/"to us") within a couple of words — the Arabic
+    // equivalent of the English verbs' "me/this/that" object check.
+    private fun arabicVerb(vararg forms: String): ActionVerb {
+        val alternation = forms.joinToString("|") { Regex.escape(it) }
+        return ActionVerb(
+            word = forms.first(),
+            bare = arabicPattern("\\b(?:$alternation)\\b"),
+            directed = arabicPattern("\\b(?:$alternation)\\b(?:\\s+\\S+){0,2}?\\s*(?:لي|لنا|إلي|الي)\\b")
+        )
+    }
+
+    private val ARABIC_ACTION_VERBS: List<ActionVerb> = listOf(
+        // Both the bare imperative ("ارسل"/"ابعتلي") AND the second-person "ت-" present-tense
+        // form ("ترسل"/"ترسلي") are included for every verb below — real Jordanian/Levantine
+        // requests are phrased at least as often as "ممكن ترسلي..." ("can you send...") as they
+        // are as a bare command, and only covering the imperative missed that whole class of
+        // real phrasing (see the ARABIC_ACTION_VERB_SUPPRESSED_BY / test-driven fixes this
+        // section went through).
+        arabicVerb("ارسل", "أرسل", "ارسلي", "أرسلي", "ترسل", "ترسلي", "ابعت", "ابعتي", "ابعتلي", "ابعتيلي"),
+        arabicVerb(
+            "جيب", "جيبي", "جيبلي", "جيبيلي", "تجيب", "تجيبي", "تجيبلي", "تجيبيلي",
+            "احضر", "أحضر", "احضري", "أحضري", "احضريلي", "أحضريلي", "تحضر", "تحضري"
+        ),
+        arabicVerb("ادفع", "إدفع", "ادفعي", "تدفع", "تدفعي", "سدد", "سددي", "تسدد", "تسددي"),
+        arabicVerb("اتصل", "إتصل", "اتصلي", "تتصل", "تتصلي", "كلمني", "كلميني"),
+        arabicVerb("تأكد", "اتأكد", "تأكدي", "أكد", "اكد", "اكدي", "أكدي"),
+        arabicVerb("راجع", "راجعي", "تراجع", "تراجعي"),
+        arabicVerb("خلص", "خلصي", "تخلص", "تخلصي", "أكمل", "اكمل", "أكملي", "اكملي", "تكمل", "تكملي"),
+        arabicVerb("الغي", "الغى", "تلغي", "كنسل"),
+        arabicVerb("وافق", "وافقي", "توافق", "توافقي"),
+        // Deliberately NOT given a "ت-" present-tense form ("توقع"/"توقعي") — that spelling
+        // collides with the completely unrelated, much more common verb "توقع" ("to expect/
+        // predict": "ما توقعت هيك رد" = "I didn't expect such a reply"), which would falsely
+        // fire an ACTION signal on an ordinary expectation statement that has nothing to do with
+        // signing anything. The bare imperative "وقع"/"وقعي" carries the same (much smaller,
+        // already-accepted) ambiguity risk as the rest of this curated v1 list.
+        arabicVerb("وقع", "وقعي"),
+        arabicVerb("استلم", "استلمي", "تستلم", "تستلمي"),
+        arabicVerb("اشتري", "اشترِ", "اشتر", "تشتري")
+    )
+
+    // "خليني اتأكد" ("let me just check/make sure") is one of WAITING_PATTERNS' own Arabic
+    // phrases (see above) — a self-commitment to verify something, not a request directed at the
+    // recipient. Without this, "اتأكد" inside that exact phrase ALSO matched as a bare ACTION
+    // verb, tying WAITING's own phrase-match score and losing the tie to ACTION (see
+    // TIE_BREAK_ORDER) — mirrors the English ACTION_VERB_SUPPRESSED_BY map's "check" entry for
+    // the same underlying reason (found the same way: a real test case misclassifying).
+    private val ARABIC_ACTION_VERB_SUPPRESSED_BY: Map<String, Regex> = mapOf(
+        "تأكد" to arabicPattern("خليني\\s+(?:تأكد|اتأكد|تأكدي)\\b")
     )
 }
