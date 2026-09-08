@@ -43,7 +43,12 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
 
     private val billingClient = BillingClient.newBuilder(appContext)
         .setListener(this)
-        .enablePendingPurchases(PendingPurchasesParams.newBuilder().build())
+        // PendingPurchasesParams.Builder.build() throws IllegalArgumentException
+        // ("Pending purchases for one-time products must be supported.") unless
+        // enableOneTimeProducts() is called — true even for a subscription-only app like this
+        // one with no INAPP products at all; the Billing Library 6/7 API requires this flag set
+        // regardless. Confirmed via the real 7.1.1 AAR (javap), not just documentation.
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
 
     private val _productDetails = MutableStateFlow<ProductDetails?>(null)
