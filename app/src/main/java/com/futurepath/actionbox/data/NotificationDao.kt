@@ -32,6 +32,16 @@ interface NotificationDao {
     @Query("SELECT COUNT(*) FROM captured_notifications")
     fun observeCount(): Flow<Int>
 
+    /**
+     * Enforces the free-tier retention window (see
+     * [com.futurepath.actionbox.data.NotificationRepository.enforceRetentionPolicy]) by
+     * deleting anything older than [cutoffTimestamp]. Filters on [NotificationEntity.timestamp]
+     * (the message's own time), not [NotificationEntity.capturedAt] (device insert time), so
+     * retention is measured from when the notification actually happened.
+     */
+    @Query("DELETE FROM captured_notifications WHERE timestamp < :cutoffTimestamp")
+    suspend fun deleteOlderThan(cutoffTimestamp: Long)
+
     @Query(
         """
         UPDATE captured_notifications

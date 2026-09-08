@@ -8,12 +8,14 @@ import com.futurepath.actionbox.classification.HybridClassifier
 import com.futurepath.actionbox.classification.TextNormalizer
 import com.futurepath.actionbox.ml.TfliteNotificationClassifier
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 class NotificationRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).notificationDao()
     private val learningDao = AppDatabase.getInstance(context).learningPatternDao()
     private val tfliteClassifier = TfliteNotificationClassifier(context.applicationContext)
+    private val settingsRepository = SettingsRepository.getInstance(context)
 
     fun observeAll(): Flow<List<NotificationEntity>> = dao.observeAll()
 
@@ -96,6 +98,8 @@ class NotificationRepository(context: Context) {
      * involved.
      */
     private suspend fun learningBoostsFor(sourceApp: String, sender: String, normalizedText: String): Map<ClassifiedState, Int> {
+        if (!settingsRepository.correctionLearningEnabled.first()) return emptyMap()
+
         val boosts = mutableMapOf<ClassifiedState, Int>()
         learningDao.strongCategoryFor(LearningPatternType.SENDER, sender)?.let {
             boosts[it] = (boosts[it] ?: 0) + CorrectionLearning.SENDER_BOOST
@@ -123,6 +127,19 @@ class NotificationRepository(context: Context) {
         learningDao.recordCorrection(LearningPatternType.PHRASE, notification.normalizedText, newState)
     }
 
+    /**
+     * Deletes captured notifications older than [FREE_RETENTION_DAYS] for free-tier users —
+     * Pro has unlimited retention, so this is a no-op there. Cheap enough (a single indexed
+     * DELETE) to call on every app open rather than needing a scheduled background job; also
+     * called right after a Pro->Free downgrade so the limit takes effect immediately instead
+     * of waiting for the next app launch.
+     */
+    suspend fun enforceRetentionPolicy() {
+        if (settingsRepository.isPro.first()) return
+        val cutoff = System.currentTimeMillis() - FREE_RETENTION_DAYS * DAY_MS
+        dao.deleteOlderThan(cutoff)
+    }
+
     companion object {
         private const val TAG = "NotificationRepository"
 
@@ -131,6 +148,9 @@ class NotificationRepository(context: Context) {
         // has no MessagingStyle data (observed gap in testing: ~2.5s). Short enough that an
         // identical message sent again minutes/hours later is unaffected.
         private const val CROSS_SOURCE_WINDOW_MS = 10_000L
+
+        private const val DAY_MS = 24 * 60 * 60 * 1000L
+        const val FREE_RETENTION_DAYS = 14
 
         @Volatile
         private var instance: NotificationRepository? = null

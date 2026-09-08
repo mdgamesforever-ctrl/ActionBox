@@ -15,10 +15,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.futurepath.actionbox.data.NotificationRepository
+import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.service.NotificationAccessUtils
-import com.futurepath.actionbox.ui.feed.NotificationFeedScreen
+import com.futurepath.actionbox.ui.MainScreen
 import com.futurepath.actionbox.ui.onboarding.PermissionOnboardingScreen
 import com.futurepath.actionbox.ui.theme.ActionBoxTheme
 import com.futurepath.actionbox.viewmodel.NotificationViewModel
@@ -26,7 +26,10 @@ import com.futurepath.actionbox.viewmodel.NotificationViewModel
 class MainActivity : ComponentActivity() {
 
     private val viewModel: NotificationViewModel by viewModels {
-        NotificationViewModel.Factory(NotificationRepository.getInstance(applicationContext))
+        NotificationViewModel.Factory(
+            NotificationRepository.getInstance(applicationContext),
+            SettingsRepository.getInstance(applicationContext)
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,11 +58,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (hasContinuedPastOnboarding && isAccessGranted) {
-                    val notifications by viewModel.notifications.collectAsStateWithLifecycle()
-                    NotificationFeedScreen(
-                        notifications = notifications,
-                        onCorrect = viewModel::correctClassification
-                    )
+                    MainScreen(viewModel = viewModel)
                 } else {
                     PermissionOnboardingScreen(
                         isAccessGranted = isAccessGranted,
