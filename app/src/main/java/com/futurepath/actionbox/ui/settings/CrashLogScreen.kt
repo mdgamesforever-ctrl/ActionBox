@@ -59,6 +59,14 @@ fun CrashLogScreen() {
                 )
             }
         } else {
+            Text(
+                text = "A copy of every recorded crash is also saved directly to your phone's " +
+                    "Downloads folder (as ActionBox_crash_<timestamp>.txt) — open it with any " +
+                    "file manager if you'd rather not use Copy/Share below.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = { clipboardManager.setText(AnnotatedString(crashText)) }) {
                     Text("Copy")
