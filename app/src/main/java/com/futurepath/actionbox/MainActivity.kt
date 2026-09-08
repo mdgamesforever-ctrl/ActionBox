@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
@@ -47,7 +48,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         widgetIntent = intent
         setContent {
-            ActionBoxTheme {
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            ActionBoxTheme(themeMode = themeMode) {
                 val context = LocalContext.current
                 val lifecycleOwner = LocalLifecycleOwner.current
 

@@ -11,6 +11,7 @@ import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
+import com.futurepath.actionbox.data.ThemeMode
 import com.futurepath.actionbox.data.effectiveState
 import com.futurepath.actionbox.data.groupActiveByCategory
 import com.futurepath.actionbox.reminders.SnoozeCalculator
@@ -66,6 +67,9 @@ class NotificationViewModel(
     private val _digestTime = MutableStateFlow(DigestTime(SettingsRepository.DEFAULT_DIGEST_HOUR, SettingsRepository.DEFAULT_DIGEST_MINUTE))
     val digestTime: StateFlow<DigestTime> = _digestTime.asStateFlow()
 
+    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
     /** The Pro subscription's product details, once Play Billing has loaded them — null until
      * then, which the paywall (ui/paywall/PaywallScreen) shows as a loading state. */
     val productDetails: StateFlow<ProductDetails?> = billingRepository.productDetails
@@ -83,6 +87,9 @@ class NotificationViewModel(
             .launchIn(viewModelScope)
         settingsRepository.digestTime
             .onEach { _digestTime.value = it }
+            .launchIn(viewModelScope)
+        settingsRepository.themeMode
+            .onEach { _themeMode.value = it }
             .launchIn(viewModelScope)
 
         // Sweep once per app open — see NotificationRepository.enforceRetentionPolicy's doc
@@ -168,6 +175,12 @@ class NotificationViewModel(
     fun setDigestTime(time: DigestTime) {
         viewModelScope.launch {
             settingsRepository.setDigestTime(time)
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            settingsRepository.setThemeMode(mode)
         }
     }
 

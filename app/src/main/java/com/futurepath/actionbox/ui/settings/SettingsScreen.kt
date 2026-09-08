@@ -40,6 +40,7 @@ import com.futurepath.actionbox.BuildConfig
 import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
+import com.futurepath.actionbox.data.ThemeMode
 import java.util.Locale
 
 /**
@@ -59,6 +60,8 @@ fun SettingsScreen(
     onDigestsEnabledChange: (Boolean) -> Unit,
     digestTime: DigestTime,
     onDigestTimeChange: (DigestTime) -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onViewCrashLogClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -137,6 +140,13 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
             DigestTimeRow(time = digestTime, onTimeChange = onDigestTimeChange)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        HorizontalDivider()
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader("Appearance")
+        ThemeModeRow(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
 
         // Debug-only escape hatch for our own testing, since there's no Play Console listing
         // reachable from a dev sandbox to actually purchase against (see BillingRepository's
@@ -250,6 +260,41 @@ private fun formatDigestTime(time: DigestTime): String {
     val amPm = if (time.hour < 12) "AM" else "PM"
     val hour12 = time.hour % 12
     return String.format(Locale.US, "%d:%02d %s", if (hour12 == 0) 12 else hour12, time.minute, amPm)
+}
+
+/** Same picker pattern as [DigestTimeRow] — a label plus a dropdown, rather than e.g. three
+ * separate radio buttons, so this row stays a single compact line. */
+@Composable
+private fun ThemeModeRow(themeMode: ThemeMode, onThemeModeChange: (ThemeMode) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "Theme", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(formatThemeMode(themeMode))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                ThemeMode.entries.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(formatThemeMode(option)) },
+                        onClick = {
+                            expanded = false
+                            onThemeModeChange(option)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatThemeMode(mode: ThemeMode): String = when (mode) {
+    ThemeMode.SYSTEM -> "System"
+    ThemeMode.LIGHT -> "Light"
+    ThemeMode.DARK -> "Dark"
 }
 
 @Composable

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -19,6 +20,14 @@ data class DigestTime(val hour: Int, val minute: Int) {
         require(hour in 0..23) { "hour must be 0-23, was $hour" }
         require(minute in 0..59) { "minute must be 0-59, was $minute" }
     }
+}
+
+/** The app-wide appearance preference — see [SettingsRepository.themeMode] and
+ * [com.futurepath.actionbox.ui.theme.ActionBoxTheme]. */
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
 }
 
 /**
@@ -72,6 +81,22 @@ class SettingsRepository(context: Context) {
         )
     }.distinctUntilChanged()
 
+    /**
+     * The user's chosen appearance — defaults to following the system setting. Stored by enum
+     * name (not ordinal) so reordering [ThemeMode]'s declaration later can't silently remap a
+     * previously-saved choice to a different mode; an unrecognized/corrupted stored value falls
+     * back to [ThemeMode.SYSTEM] the same way a missing one does.
+     */
+    val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
+        prefs[THEME_MODE]?.let { stored ->
+            try {
+                ThemeMode.valueOf(stored)
+            } catch (e: IllegalArgumentException) {
+                ThemeMode.SYSTEM
+            }
+        } ?: ThemeMode.SYSTEM
+    }.distinctUntilChanged()
+
     suspend fun setCorrectionLearningEnabled(enabled: Boolean) {
         dataStore.edit { prefs -> prefs[CORRECTION_LEARNING_ENABLED] = enabled }
     }
@@ -91,12 +116,17 @@ class SettingsRepository(context: Context) {
         }
     }
 
+    suspend fun setThemeMode(mode: ThemeMode) {
+        dataStore.edit { prefs -> prefs[THEME_MODE] = mode.name }
+    }
+
     companion object {
         private val CORRECTION_LEARNING_ENABLED = booleanPreferencesKey("correction_learning_enabled")
         private val IS_PRO = booleanPreferencesKey("is_pro")
         private val DIGESTS_ENABLED = booleanPreferencesKey("digests_enabled")
         private val DIGEST_HOUR = intPreferencesKey("digest_hour")
         private val DIGEST_MINUTE = intPreferencesKey("digest_minute")
+        private val THEME_MODE = stringPreferencesKey("theme_mode")
 
         const val DEFAULT_DIGEST_HOUR = 9
         const val DEFAULT_DIGEST_MINUTE = 0

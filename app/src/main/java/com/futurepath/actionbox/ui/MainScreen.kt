@@ -76,6 +76,7 @@ fun MainScreen(
     val correctionLearningEnabled by viewModel.correctionLearningEnabled.collectAsStateWithLifecycle()
     val digestsEnabled by viewModel.digestsEnabled.collectAsStateWithLifecycle()
     val digestTime by viewModel.digestTime.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val productDetails by viewModel.productDetails.collectAsStateWithLifecycle()
     val billingUnavailable by viewModel.billingUnavailable.collectAsStateWithLifecycle()
 
@@ -197,6 +198,8 @@ fun MainScreen(
                     onDigestsEnabledChange = viewModel::setDigestsEnabled,
                     digestTime = digestTime,
                     onDigestTimeChange = viewModel::setDigestTime,
+                    themeMode = themeMode,
+                    onThemeModeChange = viewModel::setThemeMode,
                     onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) }
                 )
             }
@@ -208,7 +211,8 @@ fun MainScreen(
                     productDetails = productDetails,
                     billingUnavailable = billingUnavailable,
                     onSubscribeClick = viewModel::purchasePro,
-                    onRetryClick = viewModel::retryBillingConnection
+                    onRetryClick = viewModel::retryBillingConnection,
+                    onContinueFreeClick = { navController.popBackStack() }
                 )
             }
             composable(DEBUG_ROUTE) {
