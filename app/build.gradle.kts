@@ -109,6 +109,10 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
+    // Snooze icon for the swipe-left gesture background (see
+    // ui/components/SwipeableNotificationCard.kt) isn't in material-icons-core's smaller
+    // curated set.
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.0")
 
     // Settings persistence (retention plan, correction-learning toggle) — see
@@ -118,6 +122,11 @@ dependencies {
     // Scheduled background work for the daily digest and WAITING follow-up nudges — see
     // reminders/ReminderScheduler.kt.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // Home screen widget (Pro-exclusive) — see widget/ActionBoxWidget.kt. Chosen over classic
+    // AppWidgetProvider/RemoteViews since it lets the widget be written as Compose-style
+    // composables, matching the rest of this app's UI layer.
+    implementation("androidx.glance:glance-appwidget:1.1.1")
 
     // Free-tier banner ads — see ui/ads/BannerAdView.kt.
     implementation("com.google.android.gms:play-services-ads:23.3.0")

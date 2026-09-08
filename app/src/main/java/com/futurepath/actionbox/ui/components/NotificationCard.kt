@@ -26,6 +26,8 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.futurepath.actionbox.classification.ClassifiedState
@@ -71,7 +73,7 @@ fun NotificationCard(notification: NotificationEntity, onCorrect: (Long, Classif
                 Text(text = notification.sender, style = MaterialTheme.typography.titleMedium)
             }
             if (notification.text.isNotBlank()) {
-                Text(text = notification.text, style = MaterialTheme.typography.bodyMedium)
+                ExpandableText(text = notification.text, style = MaterialTheme.typography.bodyMedium)
             }
             notification.extractedSummary?.let { summary ->
                 Text(
@@ -144,6 +146,48 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
+    }
+}
+
+// Long Gmail-style bodies used to fill the entire screen (see this repo's history) — anything
+// past this many lines is truncated with a "Show more" tap target instead.
+private const val COLLAPSED_MAX_LINES = 4
+
+/**
+ * Truncates [text] to [COLLAPSED_MAX_LINES] with a "Show more"/"Show less" toggle, shown only
+ * when the text is actually long enough to overflow that limit — checked via [onTextLayout]'s
+ * [androidx.compose.ui.text.TextLayoutResult.hasVisualOverflow] rather than a raw character
+ * count, since the actual wrap point depends on the card's width and the device's font scale.
+ * Shared by every place a notification's raw text is shown — the grouped inbox tabs and the
+ * debug feed alike, since both go through [NotificationCard].
+ */
+@Composable
+private fun ExpandableText(text: String, style: TextStyle) {
+    var expanded by remember(text) { mutableStateOf(false) }
+    var isOverflowing by remember(text) { mutableStateOf(false) }
+
+    Column {
+        Text(
+            text = text,
+            style = style,
+            maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_MAX_LINES,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result ->
+                if (!expanded) {
+                    isOverflowing = result.hasVisualOverflow
+                }
+            }
+        )
+        if (isOverflowing || expanded) {
+            Text(
+                text = if (expanded) "Show less" else "Show more",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .clickable { expanded = !expanded }
             )
         }
     }

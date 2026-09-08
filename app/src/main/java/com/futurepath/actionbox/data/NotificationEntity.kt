@@ -58,7 +58,16 @@ data class NotificationEntity(
     // Set once a WAITING follow-up nudge has been sent for this item (see
     // com.futurepath.actionbox.reminders.WaitingNudgeWorker) so it's never nudged twice — null
     // until then, and left untouched if the item is later corrected away from WAITING.
-    val waitingNudgedAt: Long? = null
+    val waitingNudgedAt: Long? = null,
+    // Swipe-right in the grouped inbox (see ui/components/SwipeableNotificationCard.kt) sets
+    // this to the device time it happened; null means still active. Kept rather than deleting
+    // the row so it still counts toward history/retention like any other captured notification.
+    val handledAt: Long? = null,
+    // Swipe-left + a duration pick (see reminders/SnoozeCalculator.kt) sets this to the epoch
+    // millis the item should reappear; com.futurepath.actionbox.reminders.SnoozeWorker clears it
+    // back to null once that time passes, which is what makes the item reappear — no "now"
+    // comparison needed anywhere else.
+    val snoozedUntil: Long? = null
 )
 
 /**
@@ -69,3 +78,14 @@ data class NotificationEntity(
  */
 val NotificationEntity.effectiveState: ClassifiedState?
     get() = correctedState ?: classifiedState
+
+/**
+ * Groups only the notifications that currently belong in the active inbox — handled ones swiped
+ * away and snoozed ones not yet due are both excluded — by [effectiveState]. Shared by
+ * [com.futurepath.actionbox.viewmodel.NotificationViewModel.itemsByCategory] so every grouped
+ * inbox tab (ui/inbox) automatically reflects both swipe gestures without each tab needing its
+ * own filter.
+ */
+fun List<NotificationEntity>.groupActiveByCategory(): Map<ClassifiedState, List<NotificationEntity>> =
+    filter { it.handledAt == null && it.snoozedUntil == null }
+        .groupBy { it.effectiveState ?: ClassifiedState.FYI }

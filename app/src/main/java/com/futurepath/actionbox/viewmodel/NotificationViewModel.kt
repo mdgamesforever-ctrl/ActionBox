@@ -12,6 +12,9 @@ import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.data.effectiveState
+import com.futurepath.actionbox.data.groupActiveByCategory
+import com.futurepath.actionbox.reminders.SnoozeCalculator
+import com.futurepath.actionbox.reminders.SnoozeDuration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,10 +42,12 @@ class NotificationViewModel(
      * The same notifications grouped by their EFFECTIVE state (the user's correction if any,
      * otherwise the classifier's pick) — what the grouped inbox screens (ui/inbox) actually
      * show. Computed here rather than with a separate Room query so the grouped screens and
-     * the raw debug feed both read from the exact same underlying list.
+     * the raw debug feed both read from the exact same underlying list. Excludes handled/snoozed
+     * items — see [groupActiveByCategory] — so a swipe-right/swipe-left immediately drops the
+     * item out of every tab's counts and contents.
      */
     val itemsByCategory: StateFlow<Map<ClassifiedState, List<NotificationEntity>>> = notifications
-        .map { list -> list.groupBy { it.effectiveState ?: ClassifiedState.FYI } }
+        .map { list -> list.groupActiveByCategory() }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -88,6 +93,27 @@ class NotificationViewModel(
     fun correctClassification(id: Long, newState: ClassifiedState) {
         viewModelScope.launch {
             repository.correctClassification(id, newState)
+        }
+    }
+
+    /** Swipe-right in the grouped inbox. */
+    fun markHandled(id: Long) {
+        viewModelScope.launch {
+            repository.setHandled(id, handled = true)
+        }
+    }
+
+    /** The undo action on the swipe-right snackbar. */
+    fun undoHandled(id: Long) {
+        viewModelScope.launch {
+            repository.setHandled(id, handled = false)
+        }
+    }
+
+    /** Swipe-left + a duration pick in the grouped inbox — see [SnoozeCalculator]. */
+    fun snooze(id: Long, duration: SnoozeDuration) {
+        viewModelScope.launch {
+            repository.snooze(id, SnoozeCalculator.resolveUntil(duration, System.currentTimeMillis()))
         }
     }
 

@@ -34,8 +34,18 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    // A plain (not remember-scoped) Compose state property: it needs to be assignable from
+    // onNewIntent, which runs outside Composition entirely — launchMode="singleTop" (see the
+    // manifest) means a widget tap while the app is already running reuses this Activity
+    // instance via onNewIntent rather than creating a new one, so this is the only way for that
+    // tap to reach the already-composed MainScreen. MainScreen consumes it via LaunchedEffect
+    // and reports back through onWidgetIntentHandled so the same intent doesn't re-navigate on
+    // every recomposition.
+    private var widgetIntent by mutableStateOf<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        widgetIntent = intent
         setContent {
             ActionBoxTheme {
                 val context = LocalContext.current
@@ -60,7 +70,11 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (hasContinuedPastOnboarding && isAccessGranted) {
-                    MainScreen(viewModel = viewModel)
+                    MainScreen(
+                        viewModel = viewModel,
+                        widgetIntent = widgetIntent,
+                        onWidgetIntentHandled = { widgetIntent = null }
+                    )
                 } else {
                     PermissionOnboardingScreen(
                         isAccessGranted = isAccessGranted,
@@ -74,5 +88,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        widgetIntent = intent
     }
 }

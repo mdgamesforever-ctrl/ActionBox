@@ -24,12 +24,15 @@ object ReminderNotifications {
 
     const val DIGEST_CHANNEL_ID = "digest"
     const val WAITING_NUDGE_CHANNEL_ID = "waiting_nudge"
+    const val SNOOZE_RETURNED_CHANNEL_ID = "snooze_returned"
 
     private const val DIGEST_NOTIFICATION_ID = 1001
     // Nudges share one notification id — a fresh notify() with the same id replaces the
     // previous nudge notification rather than stacking a new one every scan, so a still-
     // unresolved WAITING item doesn't spam multiple separate notifications over time.
     private const val WAITING_NUDGE_NOTIFICATION_ID = 1002
+    // Same reasoning as above: one id shared across snooze-check runs.
+    private const val SNOOZE_RETURNED_NOTIFICATION_ID = 1003
 
     /** Safe to call repeatedly — createNotificationChannel is a no-op if the channel already
      * exists with the same id. Called once at app start (see ActionBoxApplication). */
@@ -45,6 +48,11 @@ object ReminderNotifications {
                 description = "Reminders for WAITING items that haven't heard back in a while."
             }
         )
+        manager.createNotificationChannel(
+            NotificationChannel(SNOOZE_RETURNED_CHANNEL_ID, "Snoozed items", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "Lets you know when a snoozed notification is back in your inbox."
+            }
+        )
     }
 
     fun postDigest(context: Context, text: String) {
@@ -53,6 +61,10 @@ object ReminderNotifications {
 
     fun postWaitingNudge(context: Context, text: String) {
         post(context, WAITING_NUDGE_CHANNEL_ID, WAITING_NUDGE_NOTIFICATION_ID, "Still waiting?", text)
+    }
+
+    fun postSnoozeReturned(context: Context, text: String) {
+        post(context, SNOOZE_RETURNED_CHANNEL_ID, SNOOZE_RETURNED_NOTIFICATION_ID, "Snooze ended", text)
     }
 
     private fun post(context: Context, channelId: String, notificationId: Int, title: String, text: String) {

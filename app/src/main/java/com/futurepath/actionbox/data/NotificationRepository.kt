@@ -26,6 +26,27 @@ class NotificationRepository(context: Context) {
     /** See [NotificationEntity.waitingNudgedAt]. */
     suspend fun markWaitingNudged(id: Long, nudgedAt: Long) = dao.markWaitingNudged(id, nudgedAt)
 
+    /** Swipe-right in the grouped inbox. [handled] false is the snackbar "Undo" action —
+     * see [NotificationEntity.handledAt]. */
+    suspend fun setHandled(id: Long, handled: Boolean) =
+        dao.setHandledAt(id, if (handled) System.currentTimeMillis() else null)
+
+    /** Swipe-left + a duration pick in the grouped inbox — see [NotificationEntity.snoozedUntil]
+     * and [com.futurepath.actionbox.reminders.SnoozeCalculator]. */
+    suspend fun snooze(id: Long, untilMs: Long) = dao.setSnoozedUntil(id, untilMs)
+
+    /**
+     * Called periodically by com.futurepath.actionbox.reminders.SnoozeWorker: clears
+     * [NotificationEntity.snoozedUntil] on everything whose snooze has elapsed — which alone is
+     * enough to make it reappear in the active inbox, since Room's Flow re-emits on the write —
+     * and returns those rows so the caller can post a "snoozed item is back" notification.
+     */
+    suspend fun clearExpiredSnoozes(): List<NotificationEntity> {
+        val expired = dao.getExpiredSnoozes(System.currentTimeMillis())
+        expired.forEach { dao.setSnoozedUntil(it.id, null) }
+        return expired
+    }
+
     /**
      * Delegates the whole check-then-insert sequence to [NotificationDao.captureIfNew],
      * which runs it as a single Room transaction so concurrent calls can't race each other

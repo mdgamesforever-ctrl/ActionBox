@@ -9,4 +9,7 @@
 
     <string name="feed_title">Captured Notifications</string>
     <string name="feed_empty">No notifications captured yet. Trigger a notification from another app (WhatsApp, SMS, Gmail, etc.) to see it appear here.</string>
+
+    <string name="widget_label">ActionBox</string>
+    <string name="widget_description">Live counts of what needs your attention — Action, Waiting, Deadline, and Reply. Pro-exclusive.</string>
 </resources>

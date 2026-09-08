@@ -2,9 +2,12 @@ package com.futurepath.actionbox
 
 import android.app.Application
 import com.futurepath.actionbox.billing.BillingRepository
+import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.reminders.ReminderNotifications
 import com.futurepath.actionbox.reminders.ReminderScheduler
+import com.futurepath.actionbox.widget.ActionBoxWidget
+import androidx.glance.appwidget.updateAll
 import com.google.android.gms.ads.MobileAds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +36,11 @@ class ActionBoxApplication : Application() {
         MobileAds.initialize(this)
         BillingRepository.getInstance(this).startConnection()
 
+        // Snooze checks (see SnoozeWorker) always run, unlike the digest/nudge schedule below —
+        // snoozing is a direct per-item user action, not a background-summary preference the
+        // user can turn off.
+        ReminderScheduler.scheduleSnoozeChecks(this)
+
         // Single reactive source of truth for the reminder schedule: fires once immediately
         // with whatever's currently stored (including the defaults, on first launch) to
         // (re-)establish scheduling on every process start, and again every time the user
@@ -49,6 +57,16 @@ class ActionBoxApplication : Application() {
                     ReminderScheduler.cancelAll(this)
                 }
             }
+            .launchIn(applicationScope)
+
+        // Same reactive pattern for the home screen widget (widget/ActionBoxWidget.kt): fires
+        // once at process start and again on every new/changed capture or isPro flip, so the
+        // widget never needs a polling mechanism of its own — a fresh updateAll() re-runs
+        // provideGlance, which reads the latest counts/plan status straight from these same
+        // repositories.
+        val repository = NotificationRepository.getInstance(this)
+        combine(repository.observeAll(), settings.isPro) { _, _ -> Unit }
+            .onEach { ActionBoxWidget().updateAll(this) }
             .launchIn(applicationScope)
     }
 }

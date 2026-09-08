@@ -47,6 +47,20 @@ interface NotificationDao {
     @Query("UPDATE captured_notifications SET waitingNudgedAt = :nudgedAt WHERE id = :id")
     suspend fun markWaitingNudged(id: Long, nudgedAt: Long)
 
+    // See NotificationEntity.handledAt — swipe-right in the grouped inbox. A null value
+    // un-marks it (used for the swipe's "Undo" snackbar action).
+    @Query("UPDATE captured_notifications SET handledAt = :handledAt WHERE id = :id")
+    suspend fun setHandledAt(id: Long, handledAt: Long?)
+
+    // See NotificationEntity.snoozedUntil — swipe-left + a duration pick in the grouped inbox.
+    @Query("UPDATE captured_notifications SET snoozedUntil = :snoozedUntil WHERE id = :id")
+    suspend fun setSnoozedUntil(id: Long, snoozedUntil: Long?)
+
+    /** Everything com.futurepath.actionbox.reminders.SnoozeWorker needs to resurface on its next
+     * periodic check — see that class's doc. */
+    @Query("SELECT * FROM captured_notifications WHERE snoozedUntil IS NOT NULL AND snoozedUntil <= :now")
+    suspend fun getExpiredSnoozes(now: Long): List<NotificationEntity>
+
     @Query(
         """
         UPDATE captured_notifications

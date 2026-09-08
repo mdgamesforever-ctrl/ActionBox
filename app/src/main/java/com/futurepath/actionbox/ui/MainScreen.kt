@@ -1,5 +1,6 @@
 package com.futurepath.actionbox.ui
 
+import android.content.Intent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
@@ -24,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -40,12 +43,16 @@ import com.futurepath.actionbox.ui.feed.NotificationFeedScreen
 import com.futurepath.actionbox.ui.inbox.CategoryInboxScreen
 import com.futurepath.actionbox.ui.inbox.InboxTab
 import com.futurepath.actionbox.ui.paywall.PaywallScreen
+import com.futurepath.actionbox.ui.search.SearchScreen
 import com.futurepath.actionbox.ui.settings.SettingsScreen
 import com.futurepath.actionbox.viewmodel.NotificationViewModel
+import com.futurepath.actionbox.widget.WIDGET_EXTRA_OPEN_PAYWALL
+import com.futurepath.actionbox.widget.WIDGET_EXTRA_TAB
 
 private const val SETTINGS_ROUTE = "settings"
 private const val DEBUG_ROUTE = "debug"
 private const val PAYWALL_ROUTE = "paywall"
+private const val SEARCH_ROUTE = "search"
 
 /**
  * The app's primary navigation shell: bottom-nav tabs for the grouped inboxes (see [InboxTab]),
@@ -55,7 +62,11 @@ private const val PAYWALL_ROUTE = "paywall"
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: NotificationViewModel) {
+fun MainScreen(
+    viewModel: NotificationViewModel,
+    widgetIntent: Intent? = null,
+    onWidgetIntentHandled: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
     val itemsByCategory by viewModel.itemsByCategory.collectAsStateWithLifecycle()
@@ -70,11 +81,40 @@ fun MainScreen(viewModel: NotificationViewModel) {
     val currentRoute = backStackEntry?.destination?.route
     val currentTab = InboxTab.entries.find { it.route == currentRoute }
 
+    // A widget tap (see widget/ActionBoxWidget.kt) reaches here as widgetIntent — either a
+    // specific category tab, or a nudge to the paywall for the Free-tier placeholder — rather
+    // than through NavHost's own deep-link handling, since MainActivity's launchMode="singleTop"
+    // routes it to onNewIntent instead of a fresh navigation graph.
+    LaunchedEffect(widgetIntent) {
+        val intent = widgetIntent ?: return@LaunchedEffect
+        when {
+            intent.getBooleanExtra(WIDGET_EXTRA_OPEN_PAYWALL, false) -> {
+                navController.navigate(PAYWALL_ROUTE)
+            }
+            intent.hasExtra(WIDGET_EXTRA_TAB) -> {
+                val tab = InboxTab.entries.find { it.name == intent.getStringExtra(WIDGET_EXTRA_TAB) }
+                if (tab != null) {
+                    navController.navigate(tab.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            }
+        }
+        onWidgetIntentHandled()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { TopBarTitle(currentRoute, currentTab, onOpenDebug = { navController.navigate(DEBUG_ROUTE) }) },
                 actions = {
+                    if (currentTab != null) {
+                        IconButton(onClick = { navController.navigate(SEARCH_ROUTE) }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Search")
+                        }
+                    }
                     if (currentRoute != SETTINGS_ROUTE) {
                         IconButton(onClick = { navController.navigate(SETTINGS_ROUTE) }) {
                             Icon(Icons.Filled.Settings, contentDescription = "Settings")
@@ -137,7 +177,10 @@ fun MainScreen(viewModel: NotificationViewModel) {
                     CategoryInboxScreen(
                         tab = tab,
                         itemsByCategory = itemsByCategory,
-                        onCorrect = viewModel::correctClassification
+                        onCorrect = viewModel::correctClassification,
+                        onMarkHandled = viewModel::markHandled,
+                        onUndoHandled = viewModel::undoHandled,
+                        onSnooze = viewModel::snooze
                     )
                 }
             }
@@ -168,6 +211,12 @@ fun MainScreen(viewModel: NotificationViewModel) {
                     onCorrect = viewModel::correctClassification
                 )
             }
+            composable(SEARCH_ROUTE) {
+                SearchScreen(
+                    notifications = notifications,
+                    onCorrect = viewModel::correctClassification
+                )
+            }
         }
     }
 }
@@ -180,6 +229,7 @@ private fun TopBarTitle(currentRoute: String?, currentTab: InboxTab?, onOpenDebu
         currentRoute == SETTINGS_ROUTE -> "Settings"
         currentRoute == PAYWALL_ROUTE -> "Upgrade to Pro"
         currentRoute == DEBUG_ROUTE -> "Debug Feed"
+        currentRoute == SEARCH_ROUTE -> "Search"
         else -> "ActionBox"
     }
     Text(

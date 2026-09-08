@@ -13,6 +13,9 @@
 -keep class com.futurepath.actionbox.reminders.WaitingNudgeWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+-keep class com.futurepath.actionbox.reminders.SnoozeWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
 
 # ---- Room (data/AppDatabase.kt, NotificationEntity.kt, LearningPatternEntity.kt, *Dao.kt) ----
 # Room's own generated code (via KSP, compiled alongside these classes) accesses entity fields

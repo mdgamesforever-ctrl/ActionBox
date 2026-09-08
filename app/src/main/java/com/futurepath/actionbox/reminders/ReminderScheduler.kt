@@ -23,11 +23,16 @@ import java.util.concurrent.TimeUnit
 object ReminderScheduler {
     private const val DIGEST_WORK_NAME = "digest_work"
     private const val WAITING_NUDGE_WORK_NAME = "waiting_nudge_work"
+    private const val SNOOZE_CHECK_WORK_NAME = "snooze_check_work"
 
     // How often to check for newly-overdue WAITING items. Doesn't need to be precise the way
     // the digest's wall-clock time does — just frequent enough that a nudge doesn't lag its
     // implied deadline by much more than this.
     private val WAITING_NUDGE_INTERVAL: Duration = Duration.ofHours(6)
+
+    // WorkManager's PeriodicWorkRequest minimum interval — also short enough that the shortest
+    // snooze preset ("1 hour") never lags noticeably behind its actual due time.
+    private val SNOOZE_CHECK_INTERVAL: Duration = Duration.ofMinutes(15)
 
     fun scheduleAll(context: Context, time: DigestTime) {
         scheduleDigest(context, time)
@@ -37,6 +42,25 @@ object ReminderScheduler {
     fun cancelAll(context: Context) {
         cancelDigest(context)
         cancelWaitingNudges(context)
+    }
+
+    /**
+     * Unlike [scheduleAll]/[cancelAll], snooze checks aren't gated by the digest settings toggle
+     * — see [SnoozeWorker]'s doc — so [com.futurepath.actionbox.ActionBoxApplication] calls this
+     * unconditionally at app start rather than as part of the reactive digest-settings
+     * subscription.
+     */
+    fun scheduleSnoozeChecks(context: Context) {
+        val request = PeriodicWorkRequestBuilder<SnoozeWorker>(SNOOZE_CHECK_INTERVAL).build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            SNOOZE_CHECK_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
+
+    fun cancelSnoozeChecks(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(SNOOZE_CHECK_WORK_NAME)
     }
 
     /**
