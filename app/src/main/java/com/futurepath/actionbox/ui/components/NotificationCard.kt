@@ -36,6 +36,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.futurepath.actionbox.BuildConfig
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.classification.ConfidenceTier
 import com.futurepath.actionbox.classification.SmartReplySuggester
@@ -56,9 +57,19 @@ fun NotificationCard(
     onCorrect: (Long, ClassifiedState) -> Unit,
     isPro: Boolean = false
 ) {
-    val attentionTier = notification.confidenceScore
-        ?.let { ConfidenceTier.fromScore(it) }
-        ?.takeIf { it == ConfidenceTier.UNCERTAIN || it == ConfidenceTier.LOW }
+    // Confidence scoring itself always runs (see NotificationEntity.confidenceScore /
+    // ConfidenceTier) — only its visual surfacing here is gated. Real users on the Play Store
+    // release build were never meant to see a raw model-confidence percentage; internal/debug
+    // builds keep the full treatment (dashed border + "needs review"/"not sure" label) for our
+    // own testing. BuildConfig.DEBUG is a compile-time constant per build type, so R8 dead-code-
+    // eliminates the whole branch out of release rather than just hiding it at runtime.
+    val attentionTier = if (BuildConfig.DEBUG) {
+        notification.confidenceScore
+            ?.let { ConfidenceTier.fromScore(it) }
+            ?.takeIf { it == ConfidenceTier.UNCERTAIN || it == ConfidenceTier.LOW }
+    } else {
+        null
+    }
 
     // The corrected category (if the user has picked one) is what's actually shown and is
     // treated as current; classifiedState is kept untouched in the row for comparison.
@@ -118,45 +129,55 @@ fun NotificationCard(
     }
 }
 
-/** Tapping the badge opens a picker for all six categories; picking one reports the correction. */
+/**
+ * Tapping the badge opens a picker for all six categories; picking one reports the correction.
+ * The badge and the "(corrected)" label are siblings in an outer [Row] — not stacked as
+ * overlapping children of one [Box] the way this used to be laid out, which made "(corrected)"
+ * render directly on top of the badge text instead of beside it. Only the badge itself sits in
+ * its own inner [Box] (needed to anchor the tap-overlay and [DropdownMenu] to just the badge,
+ * not the label next to it).
+ */
 @Composable
 private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (ClassifiedState) -> Unit) {
     var pickerExpanded by remember { mutableStateOf(false) }
 
-    Box {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(badgeColor(state))
-        ) {
-            Text(
-                text = state.name,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 4.dp)
+    ) {
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            )
-        }
-        // Separate clickable overlay rather than putting clickable() on the Row above, so
-        // the badge's own background/shape stays exactly as designed while still being tap
-        // target for the picker.
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(top = 4.dp)
-                .clickable { pickerExpanded = true }
-        )
-        DropdownMenu(expanded = pickerExpanded, onDismissRequest = { pickerExpanded = false }) {
-            ClassifiedState.values().forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.name) },
-                    onClick = {
-                        pickerExpanded = false
-                        onPick(option)
-                    }
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(badgeColor(state))
+            ) {
+                Text(
+                    text = state.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
                 )
+            }
+            // Separate clickable overlay rather than putting clickable() on the Row above, so
+            // the badge's own background/shape stays exactly as designed while still being tap
+            // target for the picker.
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable { pickerExpanded = true }
+            )
+            DropdownMenu(expanded = pickerExpanded, onDismissRequest = { pickerExpanded = false }) {
+                ClassifiedState.values().forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.name) },
+                        onClick = {
+                            pickerExpanded = false
+                            onPick(option)
+                        }
+                    )
+                }
             }
         }
         if (isCorrected) {
@@ -164,7 +185,7 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
                 text = "(corrected)",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                modifier = Modifier.padding(start = 4.dp)
             )
         }
     }

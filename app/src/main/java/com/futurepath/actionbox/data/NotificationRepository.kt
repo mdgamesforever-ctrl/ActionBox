@@ -117,6 +117,7 @@ class NotificationRepository(context: Context) {
             // show the "needs review" treatment (see ui/components/NotificationCard.kt) on an
             // item the user explicitly told the app to always surface.
             val isVip = settingsRepository.isPro.first() && vipSenderDao.isVip(sourceApp, sender)
+            Log.d(TAG, "VIP check: sourceApp=$sourceApp sender=$sender -> isVip=$isVip (classifier picked ${classification.state})")
             dao.updateClassification(
                 id = result.insertedRowId,
                 state = if (isVip) ClassifiedState.ACTION else classification.state,

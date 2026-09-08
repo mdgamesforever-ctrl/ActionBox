@@ -44,4 +44,33 @@ class SmartReplySuggesterTest {
             assertTrue(SmartReplySuggester.suggest(input).size <= 3)
         }
     }
+
+    // Casual texting very often skips question marks and formal day names entirely — these
+    // confirm suggestions still vary for that real-world phrasing, not just clean, fully-
+    // punctuated examples. (An earlier version required a trailing "?" and a narrow token list,
+    // which meant almost every message like these fell through to the same 3 defaults.)
+    @Test
+    fun `a casual question with no question mark still gets yes-no-later suggestions`() {
+        assertEquals(listOf("Yes", "No", "Let me get back to you"), SmartReplySuggester.suggest("can you call me"))
+        assertEquals(listOf("Yes", "No", "Let me get back to you"), SmartReplySuggester.suggest("did you see this"))
+        assertEquals(listOf("Yes", "No", "Let me get back to you"), SmartReplySuggester.suggest("you around"))
+    }
+
+    @Test
+    fun `informal time shorthand still gets confirm-reschedule suggestions`() {
+        assertEquals(listOf("Sounds good", "Can we reschedule?", "Confirmed"), SmartReplySuggester.suggest("u free tmrw"))
+        assertEquals(listOf("Sounds good", "Can we reschedule?", "Confirmed"), SmartReplySuggester.suggest("let's catch up this weekend"))
+    }
+
+    @Test
+    fun `different real-looking messages produce different suggestion sets, not one fixed default`() {
+        val messages = listOf(
+            "can you send the file",
+            "see you at 3pm",
+            "thanks for the update",
+            "you free tonight"
+        )
+        val suggestionSets = messages.map { SmartReplySuggester.suggest(it) }.toSet()
+        assertTrue("Expected more than one distinct suggestion set across varied messages", suggestionSets.size > 1)
+    }
 }

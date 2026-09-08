@@ -226,6 +226,7 @@ fun MainScreen(
             composable(VIP_SENDERS_ROUTE) {
                 VipSendersScreen(
                     vipSenders = vipSenders,
+                    notifications = notifications,
                     onAdd = viewModel::addVipSender,
                     onRemove = viewModel::removeVipSender
                 )

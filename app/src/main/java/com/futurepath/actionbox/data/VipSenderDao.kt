@@ -19,15 +19,21 @@ interface VipSenderDao {
     suspend fun delete(entity: VipSenderEntity)
 
     /**
-     * True if ([sourceApp], [sender]) matches a stored VIP entry exactly, or matches an
-     * app-wide entry (a stored row for [sourceApp] with a blank [VipSenderEntity.sender]) — see
-     * [NotificationRepository.capture]'s use of this at capture time.
+     * True if ([sourceApp], [sender]) matches a stored VIP entry, or matches an app-wide entry
+     * (a stored row for [sourceApp] with a blank [VipSenderEntity.sender]) — see
+     * [NotificationRepository.capture]'s use of this at capture time. `COLLATE NOCASE` is
+     * defense-in-depth against a sender/app string whose capitalization varies slightly between
+     * messages (the same contact's display name has been observed to do this on some apps); the
+     * VIP entry itself is normally picked from an exact previously-captured value (see
+     * ui/settings/VipSendersScreen.kt) rather than free-typed, which is what actually fixed this
+     * check never matching in practice — see that screen's doc for why free text was the bug.
      */
     @Query(
         """
         SELECT EXISTS(
             SELECT 1 FROM vip_senders
-            WHERE sourceApp = :sourceApp AND (sender = :sender OR sender = '')
+            WHERE sourceApp = :sourceApp COLLATE NOCASE
+              AND (sender = :sender COLLATE NOCASE OR sender = '')
         )
         """
     )

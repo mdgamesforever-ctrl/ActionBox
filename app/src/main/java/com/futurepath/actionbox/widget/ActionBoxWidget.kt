@@ -26,6 +26,7 @@ import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.data.groupActiveByCategory
 import com.futurepath.actionbox.diagnostics.CrashLogger
 import com.futurepath.actionbox.ui.inbox.InboxTab
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 /** Extras [MainActivity.onNewIntent]/[MainActivity.onCreate] read to route a widget tap to a
@@ -44,34 +45,57 @@ private const val BACKGROUND_COLOR = 0xFF1E1E1E.toInt()
  * "single source of truth" collector already used for the reminder schedule — this class itself
  * has no polling of its own.
  *
- * [provideGlance]'s whole body is wrapped in a try/catch: an uncaught exception anywhere in here
- * (or thrown back out of a failed composition) is exactly what previously showed up as Glance's
- * generic "Can't show content" fallback on the home screen with nothing to diagnose it by — see
- * [WidgetErrorState] and [onCompositionError], which together guarantee [provideContent] is
- * always given something real to render and that a failure still leaves a traceable
- * [CrashLogger] record instead of a silent, generic error.
+ * Data is always fetched to completion in [provideGlance]'s own coroutine BEFORE
+ * [provideContent] is ever called — never inside a `LaunchedEffect` or other composition-scoped
+ * coroutine builder within the composables below, and never inside the same try/catch as
+ * [provideContent] itself. That second point matters just as much as the first: [provideContent]
+ * suspends for the widget's entire session (it doesn't "return quickly" the way a normal
+ * function call does), so if a newer [androidx.glance.appwidget.updateAll] call supersedes an
+ * in-flight one, Glance cancels that session out from under it — surfacing as
+ * `LeftCompositionCancellationException` (a real
+ * [kotlinx.coroutines.CancellationException] subtype, confirmed by inspecting the actual
+ * compose-runtime AAR). A broad `catch (e: Exception)` wrapped around [provideContent] itself
+ * would swallow that cancellation and then try to call [provideContent] AGAIN from inside the
+ * catch block on an already-cancelling coroutine — which is exactly what silently broke this
+ * widget before. Only the plain data-fetching calls below are wrapped in try/catch, each one
+ * re-throwing [CancellationException] rather than swallowing it, and [provideContent] itself is
+ * called exactly once per branch, outside any catch.
  */
 class ActionBoxWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        try {
-            // Re-checked on every render (not just at add-time) so a Pro->Free downgrade — or a
-            // Free user placing the widget some other way, e.g. via the launcher's widget picker
-            // even though the paywall gates the in-app "add widget" entry point — always falls
-            // back to this placeholder instead of showing stale/incorrect counts.
-            val isPro = SettingsRepository.getInstance(context).isPro.first()
-            if (!isPro) {
-                provideContent { UpgradePlaceholder(context) }
-                return
-            }
-
-            val activeByCategory = NotificationRepository.getInstance(context).observeAll().first().groupActiveByCategory()
-            val counts = WIDGET_TABS.associateWith { tab -> tab.states.sumOf { state -> activeByCategory[state]?.size ?: 0 } }
-
-            provideContent { WidgetContent(context, counts) }
+        // Re-checked on every render (not just at add-time) so a Pro->Free downgrade — or a
+        // Free user placing the widget some other way, e.g. via the launcher's widget picker
+        // even though the paywall gates the in-app "add widget" entry point — always falls
+        // back to this placeholder instead of showing stale/incorrect counts.
+        val isPro = try {
+            SettingsRepository.getInstance(context).isPro.first()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             CrashLogger.record(context, e)
+            false
+        }
+
+        if (!isPro) {
+            provideContent { UpgradePlaceholder(context) }
+            return
+        }
+
+        val counts = try {
+            val activeByCategory = NotificationRepository.getInstance(context).observeAll().first().groupActiveByCategory()
+            WIDGET_TABS.associateWith { tab -> tab.states.sumOf { state -> activeByCategory[state]?.size ?: 0 } }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            CrashLogger.record(context, e)
+            null
+        }
+
+        if (counts == null) {
             provideContent { WidgetErrorState(context) }
+        } else {
+            provideContent { WidgetContent(context, counts) }
         }
     }
 
