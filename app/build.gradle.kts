@@ -1,9 +1,27 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
+// Release signing credentials: a local, gitignored keystore.properties file for developer
+// machines, falling back to environment variables (RELEASE_STORE_FILE/RELEASE_STORE_PASSWORD/
+// RELEASE_KEY_ALIAS/RELEASE_KEY_PASSWORD) for CI, which supplies them as secrets instead of a
+// committed file — see .github/workflows/release.yml and keystore.properties.example. Never
+// hardcode real credentials here; this file IS committed.
+val keystoreProperties = Properties().apply {
+    val propertiesFile = rootProject.file("keystore.properties")
+    if (propertiesFile.exists()) {
+        FileInputStream(propertiesFile).use { load(it) }
+    }
+}
+
+fun releaseSigningProperty(propertiesKey: String, envVar: String): String? =
+    keystoreProperties.getProperty(propertiesKey) ?: System.getenv(envVar)
 
 android {
     namespace = "com.futurepath.actionbox"
@@ -13,19 +31,44 @@ android {
         applicationId = "com.futurepath.actionbox"
         minSdk = 26
         targetSdk = 35
+        // First Play Store submission.
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // Resolved against the PROJECT ROOT (ActionBox/), not this app/ module directory —
+            // matches keystore.properties.example's documented convention and where
+            // keystore.properties itself is read from above.
+            releaseSigningProperty("storeFile", "RELEASE_STORE_FILE")?.let { storeFile = rootProject.file(it) }
+            storePassword = releaseSigningProperty("storePassword", "RELEASE_STORE_PASSWORD")
+            keyAlias = releaseSigningProperty("keyAlias", "RELEASE_KEY_ALIAS")
+            keyPassword = releaseSigningProperty("keyPassword", "RELEASE_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
+        debug {
+            // Google's published TEST AdMob App ID/ad unit ID — a debug build must never
+            // request real ads (AdMob policy treats a developer's own test-device ad requests
+            // as invalid traffic). See BannerAdView.kt for where ADMOB_BANNER_AD_UNIT_ID is
+            // consumed.
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
+            buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/6300978111\"")
+        }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-9078149015707411~5589055329"
+            buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"ca-app-pub-9078149015707411/5471198929\"")
         }
     }
 
@@ -40,6 +83,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     androidResources {

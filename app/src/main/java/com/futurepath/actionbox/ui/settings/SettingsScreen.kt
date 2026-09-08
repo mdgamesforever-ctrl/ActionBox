@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.futurepath.actionbox.BuildConfig
 import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
@@ -136,24 +137,31 @@ fun SettingsScreen(
             DigestTimeRow(time = digestTime, onTimeChange = onDigestTimeChange)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(24.dp))
+        // Debug-only escape hatch for our own testing, since there's no Play Console listing
+        // reachable from a dev sandbox to actually purchase against (see BillingRepository's
+        // doc) — BuildConfig.DEBUG is a compile-time constant per build type, so R8 dead-code-
+        // eliminates this entire block (including the toggle and its callback) out of release
+        // builds rather than just hiding it at runtime. Never shown to a real user.
+        if (BuildConfig.DEBUG) {
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(24.dp))
 
-        SectionHeader("Debug tools")
-        Text(
-            text = "For our own testing only — bypasses Google Play Billing entirely rather than " +
-                "making a real purchase.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        SettingToggleRow(
-            title = "Simulate Pro",
-            subtitle = "No real purchase — for local testing only.",
-            checked = isPro,
-            onCheckedChange = onDebugProOverrideChange
-        )
+            SectionHeader("Debug tools")
+            Text(
+                text = "For our own testing only — bypasses Google Play Billing entirely rather than " +
+                    "making a real purchase.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            SettingToggleRow(
+                title = "Simulate Pro",
+                subtitle = "No real purchase — for local testing only.",
+                checked = isPro,
+                onCheckedChange = onDebugProOverrideChange
+            )
+        }
     }
 }
 

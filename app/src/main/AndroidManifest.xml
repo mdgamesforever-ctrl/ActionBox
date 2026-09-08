@@ -21,12 +21,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ActionBox">
 
-        <!-- Google's published TEST AdMob App ID — always serves test ads, never real ones.
-             Swap for a real App ID from the AdMob console before release (see
-             ui/ads/BannerAdView.kt for the matching test ad unit ID). -->
+        <!-- The real App ID in release builds, Google's published TEST App ID in debug builds
+             (see app/build.gradle.kts's admobAppId manifest placeholder, set per build type) —
+             debug builds must never request real ads (AdMob policy: real ad requests from a
+             developer's own test device/build are invalid traffic). ui/ads/BannerAdView.kt's
+             ad unit ID follows the same debug/release split via BuildConfig. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="${admobAppId}" />
 
         <activity
             android:name=".MainActivity"

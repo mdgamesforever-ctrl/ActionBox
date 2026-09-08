@@ -16,3 +16,10 @@ local.properties
 # that pipeline, and redistributing raw third-party dataset files in this repo isn't necessary
 # now that the cleaned/relabeled result is committed as RealDatasetCorpus.kt.
 /tools/dataset_cache/
+
+# Release signing secrets -- NEVER commit the keystore or its passwords. keystore.properties
+# holds local paths/passwords (see keystore.properties.example for the template); CI supplies
+# the same values as encrypted secrets instead (see .github/workflows/release.yml).
+/keystore.properties
+*.jks
+*.keystore
