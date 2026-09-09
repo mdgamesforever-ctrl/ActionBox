@@ -14,6 +14,7 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.futurepath.actionbox.BuildConfig
 import com.futurepath.actionbox.data.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -106,6 +107,17 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
      * "restore purchases", run automatically on every connection (app start, and whenever the
      * paywall re-triggers [startConnection]) rather than needing a dedicated button, per Play
      * Billing's own recommended integration pattern.
+     *
+     * In a debug build this must never downgrade [SettingsRepository.isPro] to false: there is
+     * no real Play Console listing reachable from a dev/test environment (see this class's own
+     * doc), so [hasActivePro] is unconditionally false here, and applying it unguarded used to
+     * silently overwrite "Simulate Pro" back to off on every single app start — right after
+     * [SettingsRepository.setPro] had correctly persisted the debug override — which is what made
+     * the toggle look like it wasn't persisting at all, and also meant VIP escalation
+     * (NotificationRepository.capture's `settingsRepository.isPro.first()` check) silently
+     * stopped firing on the very next launch. A release build has no debug override to protect
+     * and must still downgrade normally (an expired/cancelled real subscription has to actually
+     * revoke Pro), so this guard is debug-only.
      */
     private fun queryExistingPurchases() {
         val params = QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
@@ -117,7 +129,9 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
             val hasActivePro = purchases.any {
                 PRO_SUBSCRIPTION_PRODUCT_ID in it.products && it.purchaseState == Purchase.PurchaseState.PURCHASED
             }
-            scope.launch { settingsRepository.setPro(hasActivePro) }
+            if (hasActivePro || !BuildConfig.DEBUG) {
+                scope.launch { settingsRepository.setPro(hasActivePro) }
+            }
             purchases.forEach(::acknowledgeIfNeeded)
         }
     }
