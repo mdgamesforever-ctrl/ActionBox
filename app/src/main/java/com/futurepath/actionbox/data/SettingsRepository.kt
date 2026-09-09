@@ -10,9 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "actionbox_settings")
 
@@ -40,7 +38,8 @@ enum class ThemeMode {
  */
 class SettingsRepository(context: Context) {
 
-    private val dataStore = context.applicationContext.settingsDataStore
+    private val appContext = context.applicationContext
+    private val dataStore = appContext.settingsDataStore
 
     /**
      * Whether [NotificationRepository] applies local correction-learning boosts when
@@ -135,8 +134,14 @@ class SettingsRepository(context: Context) {
         resolveAppLanguage(prefs[APP_LANGUAGE])
     }.distinctUntilChanged()
 
+    /**
+     * Also mirrors the choice into [EarlyAppLanguagePrefs] — see that object's doc for why
+     * `attachBaseContext()` needs a completely separate, non-DataStore path to read this same
+     * value back synchronously and safely.
+     */
     suspend fun setAppLanguage(language: AppLanguage) {
         dataStore.edit { prefs -> prefs[APP_LANGUAGE] = language.name }
+        EarlyAppLanguagePrefs.write(appContext, language)
     }
 
     companion object {
@@ -147,16 +152,6 @@ class SettingsRepository(context: Context) {
         private val DIGEST_MINUTE = intPreferencesKey("digest_minute")
         private val THEME_MODE = stringPreferencesKey("theme_mode")
         private val APP_LANGUAGE = stringPreferencesKey("app_language")
-
-        /**
-         * Reads the persisted language synchronously — needed at the earliest possible startup
-         * points ([ActionBoxApplication.attachBaseContext]/[MainActivity.attachBaseContext],
-         * which the platform calls synchronously and can't await a suspend function) so the
-         * correct locale is applied before any UI inflates, rather than flashing System default
-         * first and then jumping to the real language a frame later.
-         */
-        fun readAppLanguageBlocking(context: Context): AppLanguage =
-            runBlocking { getInstance(context).appLanguage.first() }
 
         const val DEFAULT_DIGEST_HOUR = 9
         const val DEFAULT_DIGEST_MINUTE = 0

@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.util.Log
 import com.futurepath.actionbox.billing.BillingRepository
+import com.futurepath.actionbox.data.EarlyAppLanguagePrefs
 import com.futurepath.actionbox.data.NotificationRepository
 import com.futurepath.actionbox.data.SettingsRepository
 import com.futurepath.actionbox.data.localeAwareContext
@@ -33,8 +34,21 @@ class ActionBoxApplication : Application() {
     // Context too (not just the Activity's) means every context derived from it, including the
     // Context Glance hands the home screen widget's composables (see widget/ActionBoxWidget.kt),
     // also resolves strings against the persisted language rather than only the in-app UI.
+    //
+    // Reads via EarlyAppLanguagePrefs (plain SharedPreferences), NOT SettingsRepository/DataStore
+    // — see that object's doc. Going through SettingsRepository here was the actual cause of the
+    // instant-crash-on-launch regression: Application.attachBaseContext() runs BEFORE
+    // LoadedApk.mApplication is assigned to this instance (confirmed by tracing
+    // Application.attach()/Instrumentation.newApplication() in AOSP), so
+    // context.applicationContext can legitimately return null at this exact point — and
+    // SettingsRepository.getInstance() immediately called .applicationContext on the Context it
+    // was given, so a null Context! (a Java platform type) flowed straight into a non-null
+    // Kotlin parameter, throwing a NullPointerException before CrashLogger.installGlobalHandler
+    // even runs in onCreate() below — which is exactly why that crash never reached the in-app
+    // crash log. EarlyAppLanguagePrefs's SharedPreferences read needs no .applicationContext call
+    // at all, sidestepping the problem entirely.
     override fun attachBaseContext(base: Context) {
-        val language = SettingsRepository.readAppLanguageBlocking(base)
+        val language = EarlyAppLanguagePrefs.read(base)
         super.attachBaseContext(localeAwareContext(base, language))
     }
 
@@ -70,8 +84,11 @@ class ActionBoxApplication : Application() {
         // on API 33+, powered by android:localeConfig) with our persisted choice — see
         // AppLanguage's class doc for why this is a secondary, system-integration-only step and
         // not what makes ActionBox's own UI actually render in the right language (attachBaseContext
-        // above already did that for this Context and every one derived from it).
-        SettingsRepository.readAppLanguageBlocking(this).syncToSystemLocaleRecord()
+        // above already did that for this Context and every one derived from it). By this point
+        // onCreate() is running and this.applicationContext is safe to use, but reading via
+        // EarlyAppLanguagePrefs anyway keeps this whole startup path off DataStore/coroutines
+        // entirely, rather than mixing the two mechanisms.
+        EarlyAppLanguagePrefs.read(this).syncToSystemLocaleRecord()
 
         ReminderNotifications.ensureChannels(this)
 
