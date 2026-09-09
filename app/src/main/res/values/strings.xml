@@ -105,7 +105,6 @@
     <string name="paywall_feature_history">Notification history</string>
     <string name="paywall_feature_ad_free">Ad-free experience</string>
     <string name="paywall_feature_smart_corrections">Smart corrections</string>
-    <string name="paywall_feature_widget">Home screen widget</string>
     <string name="paywall_feature_vip">VIP escalation</string>
     <string name="paywall_feature_weekly_insights">Weekly insights digest</string>
     <string name="paywall_feature_smart_reply">Smart reply suggestions</string>

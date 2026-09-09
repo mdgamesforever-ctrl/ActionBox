@@ -41,8 +41,7 @@ import com.futurepath.actionbox.data.NotificationRepository
 
 /**
  * The Pro upsell screen — reached from Settings when the user isn't Pro yet (see
- * SettingsScreen's "Upgrade to Pro" button) or from the Free-tier widget placeholder (see
- * widget/ActionBoxWidget.kt). [productDetails]/[billingUnavailable] come from
+ * SettingsScreen's "Upgrade to Pro" button). [productDetails]/[billingUnavailable] come from
  * [com.futurepath.actionbox.billing.BillingRepository] via the view model; this composable is
  * pure presentation over whatever state Play Billing is actually in, including the states a
  * real user can hit (still loading, or genuinely unavailable — no network, Play Store outage,
@@ -149,7 +148,6 @@ private fun FeatureComparisonTable() {
         ),
         ComparisonRow(featureRes = R.string.paywall_feature_ad_free, freeIncluded = false),
         ComparisonRow(featureRes = R.string.paywall_feature_smart_corrections, freeIncluded = false),
-        ComparisonRow(featureRes = R.string.paywall_feature_widget, freeIncluded = false),
         ComparisonRow(featureRes = R.string.paywall_feature_vip, freeIncluded = false),
         ComparisonRow(featureRes = R.string.paywall_feature_weekly_insights, freeIncluded = false),
         ComparisonRow(featureRes = R.string.paywall_feature_smart_reply, freeIncluded = false),
