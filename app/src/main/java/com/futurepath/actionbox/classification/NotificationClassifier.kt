@@ -1,7 +1,5 @@
 package com.futurepath.actionbox.classification
 
-import java.util.regex.Pattern
-
 /** Result of classifying one captured notification. */
 data class ClassificationResult(
     val state: ClassifiedState,
@@ -1150,14 +1148,32 @@ object NotificationClassifier {
     // Kotlin's \b/\w in a plain Regex(...) are ASCII-only by default — verified directly against
     // the real java.util.regex engine this runs on (a throwaway jshell check): Pattern.compile(
     // "\\w").matcher("ع").find() is false, and Pattern.compile("\\bعندي\\b") fails to find
-    // "عندي" in "مرحبا عندي سؤال" at all — UNLESS Pattern.UNICODE_CHARACTER_CLASS is enabled,
-    // which makes both \w and \b use their real Unicode definitions instead of the
-    // English-only shortcut. Every phrases()-built English Regex above relies on \b, so bolting
-    // Arabic literals onto that unchanged helper would compile fine and then silently never
-    // match a single real notification — this is why every Arabic pattern below goes through
-    // arabicPhrases()/arabicPattern() instead, and why they're kept as separate constants
-    // rather than merged into the ASCII-only English ones above.
-    private fun arabicPattern(pattern: String): Regex = Pattern.compile(pattern, Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+    // "عندي" in "مرحبا عندي سؤال" at all — UNLESS Pattern.UNICODE_CHARACTER_CLASS makes both \w
+    // and \b use their real Unicode definitions instead of the English-only shortcut. An earlier
+    // version of this file passed that flag straight to Pattern.compile(), which crashed every
+    // real device it ran on: android.icu.util.regex.Pattern — what java.util.regex.Pattern
+    // actually delegates to on Android, a completely different implementation from desktop
+    // OpenJDK's — has never implemented UNICODE_CHARACTER_CLASS, on any API level, and rejects it
+    // with IllegalArgumentException unconditionally. This was invisible in
+    // NotificationClassifierTest because JVM unit tests run against the desktop JDK's own Pattern
+    // class, where the flag IS implemented; it only surfaced once this ran inside an actual
+    // Android process, where it failed inside this file's own <clinit> and took down
+    // classification for every notification — English included, since this is all one class —
+    // not just Arabic ones.
+    //
+    // Fixed without the flag at all: every \b below is a boundary against Arabic script
+    // specifically, not against \w in general, so ARABIC_WORD_BOUNDARY reimplements exactly that
+    // — a transition between "is an ARABIC_LETTER_CLASS char" and "isn't" — using only fixed-
+    // width lookaround and explicit \u escapes, both of which are ordinary regex features Android
+    // has always supported. Covers the Arabic, Arabic Supplement, Arabic Extended-A, and Arabic
+    // Presentation Forms A/B Unicode blocks, which is every code point these hand-written
+    // Arabic/Levantine patterns can actually contain.
+    private const val ARABIC_LETTER_CLASS =
+        "[\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF]"
+    private const val ARABIC_WORD_BOUNDARY =
+        "(?:(?<!$ARABIC_LETTER_CLASS)(?=$ARABIC_LETTER_CLASS)|(?<=$ARABIC_LETTER_CLASS)(?!$ARABIC_LETTER_CLASS))"
+
+    private fun arabicPattern(pattern: String): Regex = pattern.replace("\\b", ARABIC_WORD_BOUNDARY).toRegex()
 
     private fun arabicPhrases(vararg raw: String): List<Regex> = raw.map { arabicPattern("\\b${Regex.escape(it)}\\b") }
 
