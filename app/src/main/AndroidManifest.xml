@@ -76,6 +76,21 @@
                 android:resource="@xml/actionbox_widget_info" />
         </receiver>
 
+        <!-- Throwaway diagnostic widget — see widget/DiagnosticTestWidget.kt's doc. Remove this
+             block, that class, DiagnosticTestWidgetReceiver, and diagnostic_test_widget_info.xml
+             once the "Couldn't add widget" bug is isolated. -->
+        <receiver
+            android:name=".widget.DiagnosticTestWidgetReceiver"
+            android:exported="false"
+            android:label="ActionBox Test Widget">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/diagnostic_test_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>
