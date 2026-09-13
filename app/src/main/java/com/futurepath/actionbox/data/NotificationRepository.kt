@@ -198,6 +198,54 @@ class NotificationRepository(context: Context) {
         dao.deleteOlderThan(cutoff)
     }
 
+    /**
+     * Debug-only screenshot aid (see SettingsScreen's "Debug tools" section, which the whole
+     * feature is gated behind — R8 dead-code-eliminates the call site out of release builds).
+     * Inserts one fictional notification per [ClassifiedState] so Play Store screenshots can be
+     * taken without exposing any real captured notification content. Classification is set
+     * directly rather than run through [HybridClassifier]/the ML model, since the point is a
+     * guaranteed, deterministic category per row, not a realistic classification pass.
+     * Idempotent: clears any previously seeded demo rows first, so pressing the button again
+     * (e.g. to refresh timestamps) never piles up duplicates.
+     */
+    suspend fun seedDemoData() {
+        dao.deleteDemoNotifications()
+        val now = System.currentTimeMillis()
+        val demo = listOf(
+            DemoNotification("demo-action", "Horizon Health", "Dr. Foster's Office", "Please submit your ID before your appointment tomorrow", ClassifiedState.ACTION, now - 15 * MINUTE_MS),
+            DemoNotification("demo-reply", "Pulse Chat", "Jamie Rivera", "Are you free for a call this afternoon?", ClassifiedState.REPLY, now - 45 * MINUTE_MS),
+            DemoNotification("demo-waiting", "Northline Bank", "Northline Support", "Your refund request is under review", ClassifiedState.WAITING, now - 3 * HOUR_MS),
+            DemoNotification("demo-deadline", "CloudDesk", "CloudDesk Billing", "Your subscription renews in 2 days", ClassifiedState.DEADLINE, now - 6 * HOUR_MS),
+            DemoNotification("demo-fyi", "Parcel Hub", "Parcel Hub", "Your package was delivered", ClassifiedState.FYI, now - 22 * HOUR_MS),
+            DemoNotification("demo-noise", "Bright Mart", "Bright Mart Deals", "50% off your next order — shop now!", ClassifiedState.NOISE, now - 30 * HOUR_MS)
+        )
+        demo.forEach { d ->
+            dao.insertRaw(
+                NotificationEntity(
+                    notificationKey = d.key,
+                    sourceApp = d.sourceApp,
+                    sender = d.sender,
+                    text = d.text,
+                    normalizedText = TextNormalizer.normalize(d.text),
+                    timestamp = d.timestamp,
+                    capturedAt = d.timestamp,
+                    isProcessed = true,
+                    classifiedState = d.state,
+                    confidenceScore = DEMO_CONFIDENCE
+                )
+            )
+        }
+    }
+
+    private data class DemoNotification(
+        val key: String,
+        val sourceApp: String,
+        val sender: String,
+        val text: String,
+        val state: ClassifiedState,
+        val timestamp: Long
+    )
+
     companion object {
         private const val TAG = "NotificationRepository"
 
@@ -209,6 +257,11 @@ class NotificationRepository(context: Context) {
 
         private const val DAY_MS = 24 * 60 * 60 * 1000L
         const val FREE_RETENTION_DAYS = 14
+
+        // See seedDemoData.
+        private const val MINUTE_MS = 60 * 1000L
+        private const val HOUR_MS = 60 * MINUTE_MS
+        private const val DEMO_CONFIDENCE = 95
 
         @Volatile
         private var instance: NotificationRepository? = null

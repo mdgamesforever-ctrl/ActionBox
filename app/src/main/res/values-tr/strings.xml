@@ -149,6 +149,9 @@
     <string name="settings_row_simulate_pro_title">Pro\'yu Simüle Et</string>
     <string name="settings_row_simulate_pro_subtitle">Gerçek satın alma değil — yalnızca test amaçlı</string>
     <string name="settings_row_crash_log_title">Son çökme günlüğünü görüntüle</string>
+    <string name="settings_row_seed_demo_data_title">Demo veri oluştur</string>
+    <string name="settings_row_seed_demo_data_subtitle">Ekran görüntüleri için 6 örnek bildirim ekler</string>
+    <string name="toast_demo_data_seeded">Demo veri eklendi</string>
     <string name="settings_pro_chip">PRO</string>
 
     <!-- Weekly insights -->

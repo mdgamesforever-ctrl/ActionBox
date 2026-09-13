@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -96,7 +98,8 @@ fun SettingsScreen(
     onAppLanguageChange: suspend (AppLanguage) -> Unit,
     onOpenVipSenders: () -> Unit,
     onOpenWeeklyInsights: () -> Unit,
-    onViewCrashLogClick: () -> Unit
+    onViewCrashLogClick: () -> Unit,
+    onSeedDemoDataClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -195,6 +198,17 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_row_crash_log_title),
                     trailing = { TrailingChevron() },
                     onClick = onViewCrashLogClick
+                )
+                RowDivider()
+                val demoDataSeededMessage = stringResource(R.string.toast_demo_data_seeded)
+                SettingsRow(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
+                    title = stringResource(R.string.settings_row_seed_demo_data_title),
+                    subtitle = stringResource(R.string.settings_row_seed_demo_data_subtitle),
+                    onClick = {
+                        onSeedDemoDataClick()
+                        Toast.makeText(context, demoDataSeededMessage, Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
         }

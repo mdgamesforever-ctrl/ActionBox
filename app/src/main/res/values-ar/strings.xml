@@ -149,6 +149,9 @@
     <string name="settings_row_simulate_pro_title">محاكاة Pro</string>
     <string name="settings_row_simulate_pro_subtitle">لا يوجد شراء حقيقي — للاختبار فقط</string>
     <string name="settings_row_crash_log_title">عرض آخر سجل عطل</string>
+    <string name="settings_row_seed_demo_data_title">إضافة بيانات تجريبية</string>
+    <string name="settings_row_seed_demo_data_subtitle">يضيف 6 إشعارات تجريبية لأخذ لقطات الشاشة</string>
+    <string name="toast_demo_data_seeded">تمت إضافة البيانات التجريبية</string>
     <string name="settings_pro_chip">PRO</string>
 
     <!-- Weekly insights -->

@@ -183,6 +183,13 @@ class NotificationViewModel(
         }
     }
 
+    /** Debug-only screenshot aid — see [NotificationRepository.seedDemoData]. */
+    fun seedDemoData() {
+        viewModelScope.launch {
+            repository.seedDemoData()
+        }
+    }
+
     /** Launches Play's purchase UI for the Pro subscription from the paywall's Subscribe
      * button. [BillingRepository] itself updates [SettingsRepository.isPro] once the purchase
      * completes and is acknowledged — nothing further to do here. */

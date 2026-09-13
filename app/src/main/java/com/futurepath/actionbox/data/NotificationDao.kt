@@ -42,6 +42,11 @@ interface NotificationDao {
     @Query("DELETE FROM captured_notifications WHERE timestamp < :cutoffTimestamp")
     suspend fun deleteOlderThan(cutoffTimestamp: Long)
 
+    // See NotificationRepository.seedDemoData — lets the debug-only "Seed demo data" button be
+    // pressed repeatedly without piling up duplicate fictional rows each time.
+    @Query("DELETE FROM captured_notifications WHERE notificationKey LIKE 'demo-%'")
+    suspend fun deleteDemoNotifications()
+
     // See NotificationEntity.waitingNudgedAt — marks a WAITING item as already followed up on
     // so com.futurepath.actionbox.reminders.WaitingNudgeWorker never nudges it twice.
     @Query("UPDATE captured_notifications SET waitingNudgedAt = :nudgedAt WHERE id = :id")

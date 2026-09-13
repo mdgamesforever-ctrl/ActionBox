@@ -222,7 +222,8 @@ fun MainScreen(
                     onAppLanguageChange = viewModel::setAppLanguage,
                     onOpenVipSenders = { navController.navigate(VIP_SENDERS_ROUTE) },
                     onOpenWeeklyInsights = { navController.navigate(WEEKLY_INSIGHTS_ROUTE) },
-                    onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) }
+                    onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) },
+                    onSeedDemoDataClick = viewModel::seedDemoData
                 )
             }
             composable(CRASH_LOG_ROUTE) {

@@ -149,6 +149,9 @@
     <string name="settings_row_simulate_pro_title">Pro کی نقل کریں</string>
     <string name="settings_row_simulate_pro_subtitle">کوئی حقیقی خریداری نہیں — صرف جانچ کے لیے</string>
     <string name="settings_row_crash_log_title">آخری کریش لاگ دیکھیں</string>
+    <string name="settings_row_seed_demo_data_title">ڈیمو ڈیٹا شامل کریں</string>
+    <string name="settings_row_seed_demo_data_subtitle">اسکرین شاٹس کے لیے 6 نمونہ اطلاعات شامل کرتا ہے</string>
+    <string name="toast_demo_data_seeded">ڈیمو ڈیٹا شامل کر دیا گیا</string>
     <string name="settings_pro_chip">PRO</string>
 
     <!-- Weekly insights -->

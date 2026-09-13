@@ -149,6 +149,9 @@
     <string name="settings_row_simulate_pro_title">Simuler Pro</string>
     <string name="settings_row_simulate_pro_subtitle">Aucun achat réel — test uniquement</string>
     <string name="settings_row_crash_log_title">Voir le dernier journal de plantage</string>
+    <string name="settings_row_seed_demo_data_title">Générer des données de démo</string>
+    <string name="settings_row_seed_demo_data_subtitle">Ajoute 6 notifications d\'exemple pour les captures d\'écran</string>
+    <string name="toast_demo_data_seeded">Données de démo ajoutées</string>
     <string name="settings_pro_chip">PRO</string>
 
     <!-- Weekly insights -->
