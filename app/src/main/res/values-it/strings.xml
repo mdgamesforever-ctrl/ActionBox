@@ -36,11 +36,13 @@
     <string name="title_crash_log">Registro dei crash</string>
     <string name="title_vip_senders">Mittenti VIP</string>
     <string name="title_weekly_insights">Riepilogo settimanale</string>
+    <string name="title_recovery">Gestite &amp; posticipate</string>
 
     <!-- Common actions -->
     <string name="action_search">Cerca</string>
     <string name="action_continue">Continua</string>
     <string name="action_undo">Annulla</string>
+    <string name="action_restore">Ripristina</string>
     <string name="action_cancel">Annulla</string>
     <string name="action_add">Aggiungi</string>
     <string name="action_remove">Rimuovi</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">Nessuna scadenza imminente.</string>
     <string name="empty_inbox_reply">Nessun messaggio in attesa di risposta.</string>
     <string name="empty_inbox_other">Niente qui — gli avvisi informativi e il rumore compariranno in questa scheda.</string>
+    <string name="section_snoozed">Posticipate</string>
+    <string name="section_handled">Gestite</string>
+    <string name="recovery_empty_all">Nessun elemento gestito o posticipato al momento.</string>
+    <string name="recovery_empty_snoozed">Nessun elemento posticipato al momento.</string>
+    <string name="recovery_empty_handled">Nessun elemento gestito finora.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Condividi registro dei crash</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">Piano</string>
     <string name="settings_plan_subtitle_pro">Pro — cronologia illimitata, senza pubblicità</string>
     <string name="settings_plan_subtitle_free">Gratis — cronologia di %1$d giorni, con pubblicità</string>
+    <string name="settings_section_recovery">Gestite &amp; posticipate</string>
+    <string name="settings_row_recovery_title">Gestite &amp; posticipate</string>
+    <string name="settings_row_recovery_subtitle">Ripristina gli elementi rimossi per errore</string>
     <string name="settings_section_smart_corrections">Correzioni intelligenti</string>
     <string name="settings_row_learn_corrections_title">Impara dalle mie correzioni</string>
     <string name="settings_row_learn_corrections_subtitle">Classifica messaggi simili nel modo in cui li hai corretti</string>

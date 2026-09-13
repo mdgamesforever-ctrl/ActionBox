@@ -36,11 +36,13 @@
     <string name="title_crash_log">کریش لاگ</string>
     <string name="title_vip_senders">VIP بھیجنے والے</string>
     <string name="title_weekly_insights">ہفتہ وار جائزہ</string>
+    <string name="title_recovery">نمٹائی گئی اور ملتوی</string>
 
     <!-- Common actions -->
     <string name="action_search">تلاش کریں</string>
     <string name="action_continue">جاری رکھیں</string>
     <string name="action_undo">واپس لائیں</string>
+    <string name="action_restore">بحال کریں</string>
     <string name="action_cancel">منسوخ کریں</string>
     <string name="action_add">شامل کریں</string>
     <string name="action_remove">ہٹائیں</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">کوئی آنے والی آخری تاریخ نہیں ہے۔</string>
     <string name="empty_inbox_reply">جواب کے منتظر کوئی پیغام نہیں ہے۔</string>
     <string name="empty_inbox_other">یہاں کچھ نہیں ہے — برائے معلومات اور غیر ضروری اطلاعات اس ٹیب میں ظاہر ہوں گی۔</string>
+    <string name="section_snoozed">ملتوی</string>
+    <string name="section_handled">نمٹائی گئی</string>
+    <string name="recovery_empty_all">ابھی کچھ بھی نمٹایا یا ملتوی نہیں ہے۔</string>
+    <string name="recovery_empty_snoozed">ابھی کچھ بھی ملتوی نہیں ہے۔</string>
+    <string name="recovery_empty_handled">ابھی تک کچھ بھی نہیں نمٹایا گیا۔</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">کریش لاگ شیئر کریں</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">پلان</string>
     <string name="settings_plan_subtitle_pro">Pro — لامحدود ہسٹری، کوئی اشتہار نہیں</string>
     <string name="settings_plan_subtitle_free">مفت — %1$d دن کی ہسٹری، اشتہارات دکھائے جاتے ہیں</string>
+    <string name="settings_section_recovery">نمٹائی گئی اور ملتوی</string>
+    <string name="settings_row_recovery_title">نمٹائی گئی اور ملتوی</string>
+    <string name="settings_row_recovery_subtitle">غلطی سے سوائپ کی گئی اطلاعات کو بحال کریں</string>
     <string name="settings_section_smart_corrections">سمارٹ تصحیحات</string>
     <string name="settings_row_learn_corrections_title">میری تصحیحات سے سیکھیں</string>
     <string name="settings_row_learn_corrections_subtitle">ملتے جلتے پیغامات کو آپ کی درست کردہ طرز میں درجہ بند کرتا ہے</string>

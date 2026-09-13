@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -204,18 +206,31 @@ private fun StateBadge(state: ClassifiedState, isCorrected: Boolean, onPick: (Cl
  * notification's `RemoteInput` — the captured notification may no longer even be active in the
  * system tray by the time it's viewed here, and copy-to-clipboard covers the "quick response"
  * need without that added complexity.
+ *
+ * [FlowRow] rather than a plain [Row]: a fixed Row measures every chip as if it alone could take
+ * the full row width, so when an earlier chip (e.g. "Can we reschedule?" in
+ * [SmartReplySuggester.TIME_DATE_SUGGESTIONS]) is long, the chips after it get placed into
+ * whatever sliver of width is left over and their label [Text] wraps character-by-character
+ * trying to fit a whole word into it (visible with "Confirmed" specifically). FlowRow instead
+ * lets each chip take only the width its own text needs and wraps the ones that don't fit onto a
+ * new line, so chip width is never a function of a neighboring chip's length. The `maxLines`/
+ * `overflow` on the label below is a second, independent safeguard for the remaining case FlowRow
+ * alone doesn't cover — a single suggestion long enough to exceed the card's width even by
+ * itself — where it truncates with an ellipsis instead of wrapping at all.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SmartReplyRow(suggestions: List<String>) {
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
     val copiedFormat = stringResource(R.string.toast_copied)
 
-    Row(
+    FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         suggestions.forEach { suggestion ->
             AssistChip(
@@ -223,7 +238,14 @@ private fun SmartReplyRow(suggestions: List<String>) {
                     clipboardManager.setText(AnnotatedString(suggestion))
                     Toast.makeText(context, String.format(copiedFormat, suggestion), Toast.LENGTH_SHORT).show()
                 },
-                label = { Text(suggestion, style = MaterialTheme.typography.labelMedium) }
+                label = {
+                    Text(
+                        suggestion,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             )
         }
     }

@@ -36,11 +36,13 @@
     <string name="title_crash_log">Journal des plantages</string>
     <string name="title_vip_senders">Expéditeurs VIP</string>
     <string name="title_weekly_insights">Bilan hebdomadaire</string>
+    <string name="title_recovery">Traitées &amp; reportées</string>
 
     <!-- Common actions -->
     <string name="action_search">Rechercher</string>
     <string name="action_continue">Continuer</string>
     <string name="action_undo">Annuler</string>
+    <string name="action_restore">Restaurer</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_add">Ajouter</string>
     <string name="action_remove">Supprimer</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">Aucune échéance à venir.</string>
     <string name="empty_inbox_reply">Aucun message en attente de réponse.</string>
     <string name="empty_inbox_other">Rien ici — les avis d\'information et le bruit apparaîtront dans cet onglet.</string>
+    <string name="section_snoozed">Reportées</string>
+    <string name="section_handled">Traitées</string>
+    <string name="recovery_empty_all">Rien de traité ni de reporté pour le moment.</string>
+    <string name="recovery_empty_snoozed">Rien de reporté pour le moment.</string>
+    <string name="recovery_empty_handled">Rien de traité pour l\'instant.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Partager le journal des plantages</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">Forfait</string>
     <string name="settings_plan_subtitle_pro">Pro — historique illimité, sans publicité</string>
     <string name="settings_plan_subtitle_free">Gratuit — historique de %1$d jours, avec publicités</string>
+    <string name="settings_section_recovery">Traitées &amp; reportées</string>
+    <string name="settings_row_recovery_title">Traitées &amp; reportées</string>
+    <string name="settings_row_recovery_subtitle">Restaurez les éléments écartés par erreur</string>
     <string name="settings_section_smart_corrections">Corrections intelligentes</string>
     <string name="settings_row_learn_corrections_title">Apprendre de mes corrections</string>
     <string name="settings_row_learn_corrections_subtitle">Classe les messages similaires comme vous les avez corrigés</string>

@@ -36,11 +36,13 @@
     <string name="title_crash_log">Çökme Günlüğü</string>
     <string name="title_vip_senders">VIP Gönderenler</string>
     <string name="title_weekly_insights">Haftalık Özet</string>
+    <string name="title_recovery">İşlenen &amp; Ertelenen</string>
 
     <!-- Common actions -->
     <string name="action_search">Ara</string>
     <string name="action_continue">Devam Et</string>
     <string name="action_undo">Geri Al</string>
+    <string name="action_restore">Geri Yükle</string>
     <string name="action_cancel">İptal</string>
     <string name="action_add">Ekle</string>
     <string name="action_remove">Kaldır</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">Yaklaşan son tarih yok.</string>
     <string name="empty_inbox_reply">Yanıt bekleyen mesaj yok.</string>
     <string name="empty_inbox_other">Burada bir şey yok — bilgi amaçlı bildirimler ve gürültü bu sekmede görünecek.</string>
+    <string name="section_snoozed">Ertelenen</string>
+    <string name="section_handled">İşlenen</string>
+    <string name="recovery_empty_all">Şu anda işlenen veya ertelenen bir şey yok.</string>
+    <string name="recovery_empty_snoozed">Şu anda ertelenen bir şey yok.</string>
+    <string name="recovery_empty_handled">Henüz işlenen bir şey yok.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Çökme günlüğünü paylaş</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">Plan</string>
     <string name="settings_plan_subtitle_pro">Pro — sınırsız geçmiş, reklamsız</string>
     <string name="settings_plan_subtitle_free">Ücretsiz — %1$d günlük geçmiş, reklam gösterilir</string>
+    <string name="settings_section_recovery">İşlenen &amp; ertelenen</string>
+    <string name="settings_row_recovery_title">İşlenen &amp; ertelenen</string>
+    <string name="settings_row_recovery_subtitle">Yanlışlıkla kaydırdığınız öğeleri geri yükleyin</string>
     <string name="settings_section_smart_corrections">Akıllı düzeltmeler</string>
     <string name="settings_row_learn_corrections_title">Düzeltmelerimden öğren</string>
     <string name="settings_row_learn_corrections_subtitle">Benzer mesajları senin düzelttiğin şekilde sınıflandırır</string>

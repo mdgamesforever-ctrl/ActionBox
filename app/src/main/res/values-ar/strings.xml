@@ -36,11 +36,13 @@
     <string name="title_crash_log">سجل الأعطال</string>
     <string name="title_vip_senders">المرسلون المميزون</string>
     <string name="title_weekly_insights">الإحصائيات الأسبوعية</string>
+    <string name="title_recovery">تمت المعالجة والتأجيل</string>
 
     <!-- Common actions -->
     <string name="action_search">بحث</string>
     <string name="action_continue">متابعة</string>
     <string name="action_undo">تراجع</string>
+    <string name="action_restore">استعادة</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_add">إضافة</string>
     <string name="action_remove">إزالة</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">لا توجد مواعيد نهائية قادمة.</string>
     <string name="empty_inbox_reply">لا توجد رسائل بانتظار الرد.</string>
     <string name="empty_inbox_other">لا يوجد شيء هنا — ستظهر إشعارات \"للعلم\" والضوضاء في هذا التبويب.</string>
+    <string name="section_snoozed">المؤجلة</string>
+    <string name="section_handled">التي تمت معالجتها</string>
+    <string name="recovery_empty_all">لا يوجد شيء تمت معالجته أو تأجيله الآن.</string>
+    <string name="recovery_empty_snoozed">لا يوجد شيء مؤجل الآن.</string>
+    <string name="recovery_empty_handled">لم تتم معالجة أي شيء بعد.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">مشاركة سجل الأعطال</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">الخطة</string>
     <string name="settings_plan_subtitle_pro">Pro — سجل غير محدود، بدون إعلانات</string>
     <string name="settings_plan_subtitle_free">مجاني — سجل %1$d يومًا، مع عرض إعلانات</string>
+    <string name="settings_section_recovery">تمت المعالجة والتأجيل</string>
+    <string name="settings_row_recovery_title">تمت المعالجة والتأجيل</string>
+    <string name="settings_row_recovery_subtitle">استعادة العناصر التي تم تجاهلها عن طريق الخطأ</string>
     <string name="settings_section_smart_corrections">التصحيحات الذكية</string>
     <string name="settings_row_learn_corrections_title">التعلّم من تصحيحاتي</string>
     <string name="settings_row_learn_corrections_subtitle">يصنّف الرسائل المشابهة بالطريقة التي صححتها بها</string>

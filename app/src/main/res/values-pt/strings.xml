@@ -36,11 +36,13 @@
     <string name="title_crash_log">Registro de falhas</string>
     <string name="title_vip_senders">Remetentes VIP</string>
     <string name="title_weekly_insights">Resumo semanal</string>
+    <string name="title_recovery">Tratadas &amp; adiadas</string>
 
     <!-- Common actions -->
     <string name="action_search">Pesquisar</string>
     <string name="action_continue">Continuar</string>
     <string name="action_undo">Desfazer</string>
+    <string name="action_restore">Restaurar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_add">Adicionar</string>
     <string name="action_remove">Remover</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">Nenhum prazo próximo.</string>
     <string name="empty_inbox_reply">Nenhuma mensagem aguardando resposta.</string>
     <string name="empty_inbox_other">Nada por aqui — avisos informativos e ruído aparecerão nesta aba.</string>
+    <string name="section_snoozed">Adiadas</string>
+    <string name="section_handled">Tratadas</string>
+    <string name="recovery_empty_all">Nada tratado ou adiado no momento.</string>
+    <string name="recovery_empty_snoozed">Nada adiado no momento.</string>
+    <string name="recovery_empty_handled">Nada tratado ainda.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Compartilhar registro de falhas</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">Plano</string>
     <string name="settings_plan_subtitle_pro">Pro — histórico ilimitado, sem anúncios</string>
     <string name="settings_plan_subtitle_free">Gratuito — histórico de %1$d dias, com anúncios</string>
+    <string name="settings_section_recovery">Tratadas &amp; adiadas</string>
+    <string name="settings_row_recovery_title">Tratadas &amp; adiadas</string>
+    <string name="settings_row_recovery_subtitle">Restaure itens descartados por engano</string>
     <string name="settings_section_smart_corrections">Correções inteligentes</string>
     <string name="settings_row_learn_corrections_title">Aprender com minhas correções</string>
     <string name="settings_row_learn_corrections_subtitle">Classifica mensagens semelhantes da forma como você as corrigiu</string>

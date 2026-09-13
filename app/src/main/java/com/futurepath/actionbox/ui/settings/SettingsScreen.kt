@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WorkspacePremium
@@ -99,7 +100,8 @@ fun SettingsScreen(
     onOpenVipSenders: () -> Unit,
     onOpenWeeklyInsights: () -> Unit,
     onViewCrashLogClick: () -> Unit,
-    onSeedDemoDataClick: () -> Unit
+    onSeedDemoDataClick: () -> Unit,
+    onOpenRecovery: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -126,6 +128,20 @@ fun SettingsScreen(
                     )
                 },
                 onClick = { if (isPro) openManageSubscription(context) else onUpgradeClick() }
+            )
+        }
+
+        // Deliberately its own section outside the Pro-feature cluster below (Smart
+        // Corrections/VIP Senders/Weekly Insights all gate on isPro) — recovering an
+        // accidentally-swiped notification is a usability fix for every user, not a premium
+        // perk, so this is never gated on or even mentions Pro status.
+        SettingsSection(title = stringResource(R.string.settings_section_recovery)) {
+            SettingsRow(
+                icon = Icons.Filled.Restore,
+                title = stringResource(R.string.settings_row_recovery_title),
+                subtitle = stringResource(R.string.settings_row_recovery_subtitle),
+                trailing = { TrailingChevron() },
+                onClick = onOpenRecovery
             )
         }
 

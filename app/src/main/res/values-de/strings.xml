@@ -36,11 +36,13 @@
     <string name="title_crash_log">Absturzprotokoll</string>
     <string name="title_vip_senders">VIP-Absender</string>
     <string name="title_weekly_insights">Wochenübersicht</string>
+    <string name="title_recovery">Erledigt &amp; aufgeschoben</string>
 
     <!-- Common actions -->
     <string name="action_search">Suchen</string>
     <string name="action_continue">Weiter</string>
     <string name="action_undo">Rückgängig</string>
+    <string name="action_restore">Wiederherstellen</string>
     <string name="action_cancel">Abbrechen</string>
     <string name="action_add">Hinzufügen</string>
     <string name="action_remove">Entfernen</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">Keine anstehenden Fristen.</string>
     <string name="empty_inbox_reply">Keine Nachrichten warten auf Antwort.</string>
     <string name="empty_inbox_other">Hier ist nichts — Info-Hinweise und Rauschen erscheinen in diesem Tab.</string>
+    <string name="section_snoozed">Aufgeschoben</string>
+    <string name="section_handled">Erledigt</string>
+    <string name="recovery_empty_all">Momentan nichts erledigt oder aufgeschoben.</string>
+    <string name="recovery_empty_snoozed">Momentan nichts aufgeschoben.</string>
+    <string name="recovery_empty_handled">Noch nichts erledigt.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Absturzprotokoll teilen</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">Plan</string>
     <string name="settings_plan_subtitle_pro">Pro — unbegrenzter Verlauf, keine Werbung</string>
     <string name="settings_plan_subtitle_free">Kostenlos — %1$d-Tage-Verlauf, Werbung wird angezeigt</string>
+    <string name="settings_section_recovery">Erledigt &amp; aufgeschoben</string>
+    <string name="settings_row_recovery_title">Erledigt &amp; aufgeschoben</string>
+    <string name="settings_row_recovery_subtitle">Versehentlich weggewischte Elemente wiederherstellen</string>
     <string name="settings_section_smart_corrections">Intelligente Korrekturen</string>
     <string name="settings_row_learn_corrections_title">Aus meinen Korrekturen lernen</string>
     <string name="settings_row_learn_corrections_subtitle">Klassifiziert ähnliche Nachrichten so, wie du sie korrigiert hast</string>

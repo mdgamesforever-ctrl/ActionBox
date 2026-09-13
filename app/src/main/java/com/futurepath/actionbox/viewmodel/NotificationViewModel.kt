@@ -59,6 +59,30 @@ class NotificationViewModel(
             initialValue = emptyMap()
         )
 
+    /**
+     * Everything currently hidden from the active inbox by a swipe-right, for the recovery
+     * screen (ui/recovery/RecoveryScreen) — the only place a swipe that missed its Snackbar's
+     * undo window can still be reversed. Newest-handled first, since that's the swipe someone is
+     * most likely trying to undo.
+     */
+    val handledNotifications: StateFlow<List<NotificationEntity>> = notifications
+        .map { list -> list.filter { it.handledAt != null }.sortedByDescending { it.handledAt } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    /** Same as [handledNotifications] but for swipe-left/snooze — soonest-to-reappear first,
+     * since that's the more time-sensitive end of the list. */
+    val snoozedNotifications: StateFlow<List<NotificationEntity>> = notifications
+        .map { list -> list.filter { it.snoozedUntil != null }.sortedBy { it.snoozedUntil } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     private val _correctionLearningEnabled = MutableStateFlow(true)
     val correctionLearningEnabled: StateFlow<Boolean> = _correctionLearningEnabled.asStateFlow()
 

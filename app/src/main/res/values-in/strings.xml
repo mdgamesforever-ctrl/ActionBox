@@ -36,11 +36,13 @@
     <string name="title_crash_log">Log Crash</string>
     <string name="title_vip_senders">Pengirim VIP</string>
     <string name="title_weekly_insights">Ringkasan Mingguan</string>
+    <string name="title_recovery">Ditangani &amp; Ditunda</string>
 
     <!-- Common actions -->
     <string name="action_search">Cari</string>
     <string name="action_continue">Lanjutkan</string>
     <string name="action_undo">Urungkan</string>
+    <string name="action_restore">Pulihkan</string>
     <string name="action_cancel">Batal</string>
     <string name="action_add">Tambah</string>
     <string name="action_remove">Hapus</string>
@@ -82,6 +84,11 @@
     <string name="empty_inbox_deadline">Tidak ada tenggat mendatang.</string>
     <string name="empty_inbox_reply">Tidak ada pesan yang menunggu balasan.</string>
     <string name="empty_inbox_other">Tidak ada apa-apa di sini — pemberitahuan info dan gangguan akan muncul di tab ini.</string>
+    <string name="section_snoozed">Ditunda</string>
+    <string name="section_handled">Ditangani</string>
+    <string name="recovery_empty_all">Belum ada yang ditangani atau ditunda saat ini.</string>
+    <string name="recovery_empty_snoozed">Belum ada yang ditunda saat ini.</string>
+    <string name="recovery_empty_handled">Belum ada yang ditangani.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Bagikan log crash</string>
@@ -126,6 +133,9 @@
     <string name="settings_row_plan_title">Paket</string>
     <string name="settings_plan_subtitle_pro">Pro — riwayat tak terbatas, tanpa iklan</string>
     <string name="settings_plan_subtitle_free">Gratis — riwayat %1$d hari, iklan ditampilkan</string>
+    <string name="settings_section_recovery">Ditangani &amp; ditunda</string>
+    <string name="settings_row_recovery_title">Ditangani &amp; ditunda</string>
+    <string name="settings_row_recovery_subtitle">Pulihkan item yang tidak sengaja disingkirkan</string>
     <string name="settings_section_smart_corrections">Koreksi cerdas</string>
     <string name="settings_row_learn_corrections_title">Pelajari dari koreksiku</string>
     <string name="settings_row_learn_corrections_subtitle">Mengklasifikasikan pesan serupa sesuai cara kamu mengoreksinya</string>

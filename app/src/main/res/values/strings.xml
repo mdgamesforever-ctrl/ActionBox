@@ -36,11 +36,13 @@
     <string name="title_crash_log">Crash Log</string>
     <string name="title_vip_senders">VIP Senders</string>
     <string name="title_weekly_insights">Weekly Insights</string>
+    <string name="title_recovery">Handled &amp; Snoozed</string>
 
     <!-- Common actions -->
     <string name="action_search">Search</string>
     <string name="action_continue">Continue</string>
     <string name="action_undo">Undo</string>
+    <string name="action_restore">Restore</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
     <string name="action_remove">Remove</string>
@@ -82,6 +84,13 @@
     <string name="empty_inbox_deadline">No upcoming deadlines.</string>
     <string name="empty_inbox_reply">No messages waiting on a reply.</string>
     <string name="empty_inbox_other">Nothing here — FYI notices and noise will show up in this tab.</string>
+
+    <!-- Handled &amp; Snoozed recovery screen -->
+    <string name="section_snoozed">Snoozed</string>
+    <string name="section_handled">Handled</string>
+    <string name="recovery_empty_all">Nothing handled or snoozed right now.</string>
+    <string name="recovery_empty_snoozed">Nothing snoozed right now.</string>
+    <string name="recovery_empty_handled">Nothing handled yet.</string>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Share crash log</string>
@@ -126,6 +135,9 @@
     <string name="settings_row_plan_title">Plan</string>
     <string name="settings_plan_subtitle_pro">Pro — unlimited history, no ads</string>
     <string name="settings_plan_subtitle_free">Free — %1$d-day history, ads shown</string>
+    <string name="settings_section_recovery">Handled &amp; snoozed</string>
+    <string name="settings_row_recovery_title">Handled &amp; snoozed</string>
+    <string name="settings_row_recovery_subtitle">Restore items you swiped away by mistake</string>
     <string name="settings_section_smart_corrections">Smart corrections</string>
     <string name="settings_row_learn_corrections_title">Learn from my corrections</string>
     <string name="settings_row_learn_corrections_subtitle">Classifies similar messages the way you\'ve corrected them</string>

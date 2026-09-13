@@ -47,6 +47,7 @@ import com.futurepath.actionbox.ui.inbox.CategoryInboxScreen
 import com.futurepath.actionbox.ui.inbox.InboxTab
 import com.futurepath.actionbox.ui.insights.WeeklyInsightsScreen
 import com.futurepath.actionbox.ui.paywall.PaywallScreen
+import com.futurepath.actionbox.ui.recovery.RecoveryScreen
 import com.futurepath.actionbox.ui.search.SearchScreen
 import com.futurepath.actionbox.ui.settings.CrashLogScreen
 import com.futurepath.actionbox.ui.settings.SettingsScreen
@@ -62,6 +63,7 @@ private const val SEARCH_ROUTE = "search"
 private const val CRASH_LOG_ROUTE = "crash_log"
 private const val VIP_SENDERS_ROUTE = "vip_senders"
 private const val WEEKLY_INSIGHTS_ROUTE = "weekly_insights"
+private const val RECOVERY_ROUTE = "recovery"
 
 /**
  * The app's primary navigation shell: bottom-nav tabs for the grouped inboxes (see [InboxTab]),
@@ -89,6 +91,8 @@ fun MainScreen(
     val billingUnavailable by viewModel.billingUnavailable.collectAsStateWithLifecycle()
     val vipSenders by viewModel.vipSenders.collectAsStateWithLifecycle()
     val weeklyInsights by viewModel.weeklyInsights.collectAsStateWithLifecycle()
+    val handledNotifications by viewModel.handledNotifications.collectAsStateWithLifecycle()
+    val snoozedNotifications by viewModel.snoozedNotifications.collectAsStateWithLifecycle()
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -223,11 +227,22 @@ fun MainScreen(
                     onOpenVipSenders = { navController.navigate(VIP_SENDERS_ROUTE) },
                     onOpenWeeklyInsights = { navController.navigate(WEEKLY_INSIGHTS_ROUTE) },
                     onViewCrashLogClick = { navController.navigate(CRASH_LOG_ROUTE) },
-                    onSeedDemoDataClick = viewModel::seedDemoData
+                    onSeedDemoDataClick = viewModel::seedDemoData,
+                    onOpenRecovery = { navController.navigate(RECOVERY_ROUTE) }
                 )
             }
             composable(CRASH_LOG_ROUTE) {
                 CrashLogScreen()
+            }
+            composable(RECOVERY_ROUTE) {
+                RecoveryScreen(
+                    handled = handledNotifications,
+                    snoozed = snoozedNotifications,
+                    onCorrect = viewModel::correctClassification,
+                    onRestoreHandled = viewModel::undoHandled,
+                    onRestoreSnoozed = viewModel::undoSnooze,
+                    isPro = isPro
+                )
             }
             composable(VIP_SENDERS_ROUTE) {
                 VipSendersScreen(
@@ -278,6 +293,7 @@ private fun TopBarTitle(currentRoute: String?, currentTab: InboxTab?, onOpenDebu
         currentRoute == CRASH_LOG_ROUTE -> stringResource(R.string.title_crash_log)
         currentRoute == VIP_SENDERS_ROUTE -> stringResource(R.string.title_vip_senders)
         currentRoute == WEEKLY_INSIGHTS_ROUTE -> stringResource(R.string.title_weekly_insights)
+        currentRoute == RECOVERY_ROUTE -> stringResource(R.string.title_recovery)
         else -> stringResource(R.string.app_name)
     }
     Text(
