@@ -42,22 +42,28 @@ class NotificationRepository(context: Context) {
         dao.setHandledAt(id, if (handled) System.currentTimeMillis() else null)
 
     /** Swipe-left + a duration pick in the grouped inbox — see [NotificationEntity.snoozedUntil]
-     * and [com.futurepath.actionbox.reminders.SnoozeCalculator]. */
-    suspend fun snooze(id: Long, untilMs: Long) = dao.setSnoozedUntil(id, untilMs)
+     * and [com.futurepath.actionbox.reminders.SnoozeCalculator]. Also stamps
+     * [NotificationEntity.snoozedAt] with the current time, which is what
+     * [enforceRecoveryRetentionPolicy] ages from. */
+    suspend fun snooze(id: Long, untilMs: Long) =
+        dao.setSnoozedUntil(id, untilMs, System.currentTimeMillis())
 
     /** The undo action on the snooze snackbar — clears the snooze immediately rather than
-     * waiting for it to elapse naturally, restoring the item to the active inbox right away. */
-    suspend fun clearSnooze(id: Long) = dao.setSnoozedUntil(id, null)
+     * waiting for it to elapse naturally, restoring the item to the active inbox right away.
+     * Clears [NotificationEntity.snoozedAt] alongside snoozedUntil since neither means anything
+     * once the item isn't snoozed. */
+    suspend fun clearSnooze(id: Long) = dao.setSnoozedUntil(id, null, null)
 
     /**
      * Called periodically by com.futurepath.actionbox.reminders.SnoozeWorker: clears
-     * [NotificationEntity.snoozedUntil] on everything whose snooze has elapsed — which alone is
-     * enough to make it reappear in the active inbox, since Room's Flow re-emits on the write —
-     * and returns those rows so the caller can post a "snoozed item is back" notification.
+     * [NotificationEntity.snoozedUntil] (and [NotificationEntity.snoozedAt]) on everything whose
+     * snooze has elapsed — which alone is enough to make it reappear in the active inbox, since
+     * Room's Flow re-emits on the write — and returns those rows so the caller can post a
+     * "snoozed item is back" notification.
      */
     suspend fun clearExpiredSnoozes(): List<NotificationEntity> {
         val expired = dao.getExpiredSnoozes(System.currentTimeMillis())
-        expired.forEach { dao.setSnoozedUntil(it.id, null) }
+        expired.forEach { dao.setSnoozedUntil(it.id, null, null) }
         return expired
     }
 
@@ -196,6 +202,27 @@ class NotificationRepository(context: Context) {
         if (settingsRepository.isPro.first()) return
         val cutoff = System.currentTimeMillis() - FREE_RETENTION_DAYS * DAY_MS
         dao.deleteOlderThan(cutoff)
+    }
+
+    /**
+     * Free-tier-only cleanup for the recovery screen (ui/recovery/RecoveryScreen): Handled and
+     * Snoozed items don't have any retention sweep of their own the way the active inbox does
+     * via [enforceRetentionPolicy] above, so they'd otherwise accumulate in storage forever.
+     * Deletes anything whose [NotificationEntity.handledAt]/[NotificationEntity.snoozedAt] is
+     * older than [FREE_RETENTION_DAYS] — timed from when the item was actually marked handled/
+     * snoozed, not [NotificationEntity.timestamp] (when the original notification arrived), so
+     * a notification captured months ago but only just swiped away today still gets the full
+     * retention window. Pro is exempt, matching [FREE_RETENTION_DAYS]'s unlimited-history
+     * exemption everywhere else it's enforced. Called both on every app open (see
+     * NotificationViewModel.init, same as [enforceRetentionPolicy]) and from the periodic
+     * [com.futurepath.actionbox.reminders.SnoozeWorker] run, since WorkManager's periodic jobs
+     * can lag under Doze — the app-open call is the fast path, the worker is the one that still
+     * catches it if the app goes unopened for a while.
+     */
+    suspend fun enforceRecoveryRetentionPolicy() {
+        if (settingsRepository.isPro.first()) return
+        val cutoff = System.currentTimeMillis() - FREE_RETENTION_DAYS * DAY_MS
+        dao.deleteHandledOrSnoozedOlderThan(cutoff)
     }
 
     /**

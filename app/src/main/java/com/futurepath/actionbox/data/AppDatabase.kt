@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [NotificationEntity::class, LearningPatternEntity::class, VipSenderEntity::class],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

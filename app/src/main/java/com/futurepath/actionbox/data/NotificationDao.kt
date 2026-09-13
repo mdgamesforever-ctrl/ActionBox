@@ -43,6 +43,23 @@ interface NotificationDao {
     @Query("DELETE FROM captured_notifications WHERE timestamp < :cutoffTimestamp")
     suspend fun deleteOlderThan(cutoffTimestamp: Long)
 
+    /**
+     * Free-tier cleanup for the recovery screen (see
+     * [com.futurepath.actionbox.data.NotificationRepository.enforceRecoveryRetentionPolicy]).
+     * Filters on [NotificationEntity.handledAt]/[NotificationEntity.snoozedAt] — when each item
+     * was actually marked, not [NotificationEntity.timestamp] (when the original notification
+     * arrived) — so a very old notification that's only just been handled still gets the full
+     * retention window before it's cleaned up.
+     */
+    @Query(
+        """
+        DELETE FROM captured_notifications
+        WHERE (handledAt IS NOT NULL AND handledAt < :cutoffTimestamp)
+           OR (snoozedAt IS NOT NULL AND snoozedAt < :cutoffTimestamp)
+        """
+    )
+    suspend fun deleteHandledOrSnoozedOlderThan(cutoffTimestamp: Long)
+
     // See NotificationRepository.seedDemoData — lets the debug-only "Seed demo data" button be
     // pressed repeatedly without piling up duplicate fictional rows each time.
     @Query("DELETE FROM captured_notifications WHERE notificationKey LIKE 'demo-%'")
@@ -67,9 +84,11 @@ interface NotificationDao {
     @Query("UPDATE captured_notifications SET handledAt = :handledAt WHERE id = :id")
     suspend fun setHandledAt(id: Long, handledAt: Long?)
 
-    // See NotificationEntity.snoozedUntil — swipe-left + a duration pick in the grouped inbox.
-    @Query("UPDATE captured_notifications SET snoozedUntil = :snoozedUntil WHERE id = :id")
-    suspend fun setSnoozedUntil(id: Long, snoozedUntil: Long?)
+    // See NotificationEntity.snoozedUntil/snoozedAt — swipe-left + a duration pick in the
+    // grouped inbox. Both are always written together: snoozedAt is only ever meaningful while
+    // snoozedUntil is set, so a caller clearing one (undo, natural expiry) clears both.
+    @Query("UPDATE captured_notifications SET snoozedUntil = :snoozedUntil, snoozedAt = :snoozedAt WHERE id = :id")
+    suspend fun setSnoozedUntil(id: Long, snoozedUntil: Long?, snoozedAt: Long?)
 
     /** Everything com.futurepath.actionbox.reminders.SnoozeWorker needs to resurface on its next
      * periodic check — see that class's doc. */

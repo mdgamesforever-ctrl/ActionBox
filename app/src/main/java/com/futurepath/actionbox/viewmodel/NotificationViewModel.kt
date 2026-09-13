@@ -147,6 +147,10 @@ class NotificationViewModel(
         // Sweep once per app open — see NotificationRepository.enforceRetentionPolicy's doc
         // for why a scheduled background job isn't needed for this.
         viewModelScope.launch { repository.enforceRetentionPolicy() }
+        // Same idea for the recovery screen's own retention window — see
+        // NotificationRepository.enforceRecoveryRetentionPolicy's doc for why this ALSO runs
+        // from SnoozeWorker rather than relying on just this app-open call.
+        viewModelScope.launch { repository.enforceRecoveryRetentionPolicy() }
     }
 
     fun correctClassification(id: Long, newState: ClassifiedState) {
@@ -226,6 +230,7 @@ class NotificationViewModel(
             // waiting for the next app launch; upgrading is always a no-op here since the
             // retention sweep only ever deletes, never restores.
             repository.enforceRetentionPolicy()
+            repository.enforceRecoveryRetentionPolicy()
         }
     }
 

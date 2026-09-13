@@ -67,7 +67,14 @@ data class NotificationEntity(
     // millis the item should reappear; com.futurepath.actionbox.reminders.SnoozeWorker clears it
     // back to null once that time passes, which is what makes the item reappear — no "now"
     // comparison needed anywhere else.
-    val snoozedUntil: Long? = null
+    val snoozedUntil: Long? = null,
+    // Device time the swipe-left in the grouped inbox actually happened — deliberately separate
+    // from [snoozedUntil], which is when the item should REAPPEAR, not when it was snoozed.
+    // Cleared back to null alongside snoozedUntil (undo, natural expiry, or a later re-snooze),
+    // so it's only ever non-null while the item currently IS snoozed. Exists for
+    // NotificationRepository.enforceRecoveryRetentionPolicy, which needs "how long has this sat
+    // in the recovery screen" and would get the wrong answer from snoozedUntil for that.
+    val snoozedAt: Long? = null
 )
 
 /**

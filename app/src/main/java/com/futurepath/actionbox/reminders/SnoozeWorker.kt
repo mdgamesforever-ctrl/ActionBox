@@ -13,6 +13,13 @@ import com.futurepath.actionbox.data.NotificationRepository
  * then posts one notification calling attention to what came back. Unlike the digest/nudge
  * workers, this always runs regardless of the digest settings toggle: snoozing is a direct user
  * action on a specific item, not a background summarization preference.
+ *
+ * Also runs [NotificationRepository.enforceRecoveryRetentionPolicy] on every tick — the
+ * free-tier Handled/Snoozed cleanup for ui/recovery/RecoveryScreen. Piggybacked here rather than
+ * a separate WorkManager job: this worker is already the one unconditional, frequent (15-minute)
+ * periodic tick in the app, and the cleanup needs exactly that — silent background hygiene with
+ * no UI of its own, never a notification (contrast with the snooze-returned notification above,
+ * which stays scoped to actual snooze expiry).
  */
 class SnoozeWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
@@ -22,6 +29,7 @@ class SnoozeWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         if (returned.isNotEmpty()) {
             ReminderNotifications.postSnoozeReturned(applicationContext, returnedText(returned.map { it.sender }))
         }
+        repository.enforceRecoveryRetentionPolicy()
         return Result.success()
     }
 
