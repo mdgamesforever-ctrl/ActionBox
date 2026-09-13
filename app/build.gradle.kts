@@ -67,7 +67,7 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
-            manifestPlaceholders["admobAppId"] = "ca-app-pub-9078149015707411~5589055329"
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-9078149015707411~7929841303"
             buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"ca-app-pub-9078149015707411/5471198929\"")
         }
     }
