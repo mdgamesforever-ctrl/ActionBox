@@ -91,6 +91,14 @@ android {
         // from assets rather than needing to copy/inflate it to a temp file at runtime.
         noCompress += "tflite"
     }
+
+    testOptions {
+        unitTests {
+            // Needed for Robolectric (see RecoveryScreenSwipeBackgroundTest) to resolve theme/
+            // resource references while rendering Compose content on the JVM.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -162,4 +170,13 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Robolectric: lets RecoveryScreenSwipeBackgroundTest render real Compose UI (including
+    // pixel-level screenshot assertions) as a fast JVM unit test instead of needing a connected
+    // device/emulator — this repo has no instrumented-test infra otherwise.
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation("androidx.test.ext:junit:1.2.1")
 }

@@ -35,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -308,7 +309,7 @@ private fun EmptySectionText(message: String) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RecoveryRow(
+internal fun RecoveryRow(
     notification: NotificationEntity,
     isPro: Boolean,
     onCorrect: (Long, ClassifiedState) -> Unit,
@@ -320,7 +321,21 @@ private fun RecoveryRow(
     onToggleSelected: () -> Unit
 ) {
     val content: @Composable () -> Unit = {
-        Row(verticalAlignment = Alignment.Top) {
+        // fillMaxWidth + an opaque background matching the screen: SwipeToDismissBox's pink
+        // delete background (see DeleteSwipeBackground below) always renders — it's meant to
+        // stay fully hidden behind this content at rest purely because this content fully
+        // overlaps it, not because the background conditionally hides itself. Without an
+        // explicit opaque backing here, the transparent gaps in this Row (this container itself,
+        // and the snoozedUntil/Restore row below NotificationCard, neither of which paint their
+        // own background) let that pink layer bleed through even when nothing has been swiped —
+        // this was the actual bug, not the swipe offset (rememberSwipeToDismissBoxState already
+        // defaults to Settled/offset-0, which was never the issue).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background),
+            verticalAlignment = Alignment.Top
+        ) {
             if (selectionMode) {
                 Checkbox(
                     checked = selected,
@@ -333,7 +348,11 @@ private fun RecoveryRow(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
+                        .padding(top = 4.dp)
+                        // Stable target for RecoveryScreenSwipeBackgroundTest — this specific row
+                        // (transparent by design; only the outer Row's background covers it) is
+                        // exactly what let the delete-swipe background bleed through.
+                        .testTag("recoveryRowFooter"),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
