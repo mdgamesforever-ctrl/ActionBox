@@ -1,5 +1,7 @@
 package com.futurepath.actionbox.classification
 
+import com.futurepath.actionbox.classification.SyntheticNotificationCorpus.Case
+
 /**
  * A large-scale (10,000+ example) validation corpus, independent of [SyntheticNotificationCorpus]
  * and [DiverseNotificationCorpus], built to stress-test the classifier at a scale neither of

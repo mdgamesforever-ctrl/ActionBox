@@ -25,12 +25,12 @@ fun releaseSigningProperty(propertiesKey: String, envVar: String): String? =
 
 android {
     namespace = "com.futurepath.actionbox"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.futurepath.actionbox"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // First Play Store submission.
         versionCode = 1
         versionName = "1.0"
@@ -69,6 +69,14 @@ android {
             signingConfig = signingConfigs.getByName("release")
             manifestPlaceholders["admobAppId"] = "ca-app-pub-9078149015707411~7929841303"
             buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"ca-app-pub-9078149015707411/5471198929\"")
+            // Bundles native debug symbols (from TensorFlow Lite's prebuilt .so files, the only
+            // native code in this app — no NDK/C++ sources of our own) into the AAB so Play
+            // Console can symbolicate native crash/ANR stack traces. FULL over SYMBOL_TABLE for
+            // file/line info, not just function names; well under the 1.6GB Play Console limit
+            // given this app's small native footprint.
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 
@@ -147,13 +155,21 @@ dependencies {
     // Free-tier banner ads — see ui/ads/BannerAdView.kt.
     implementation("com.google.android.gms:play-services-ads:23.3.0")
 
-    // Pro subscription purchase flow — see billing/BillingRepository.kt.
-    implementation("com.android.billingclient:billing-ktx:7.1.1")
+    // Pro subscription purchase flow — see billing/BillingRepository.kt. 8.x removed several
+    // pre-base-plan-era APIs (querySkuDetailsAsync, queryPurchaseHistoryAsync, the parameterless
+    // enablePendingPurchases()) — this app already used their modern replacements under 7.1.1
+    // (queryProductDetailsAsync, QueryPurchasesParams, PendingPurchasesParams), so this bump
+    // needed no BillingRepository changes. Pinned to the last 8.x release rather than 9.x, which
+    // isn't required here and has its own migration surface not otherwise needed by this task.
+    implementation("com.android.billingclient:billing-ktx:8.3.0")
 
-    // Room
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    // Room. Bumped from 2.6.1 alongside the Kotlin 2.2.10/KSP2 upgrade (needed for Billing
+    // Library 8.3.0): the 2.6.1 room-compiler hits a known KSP2 bug ("unexpected jvm signature
+    // V", google/ksp#2957) processing suspend DAO methods under Kotlin 2.1+/KSP2 — fixed in
+    // Room 2.7.0+.
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
 
     // Kotlin coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")

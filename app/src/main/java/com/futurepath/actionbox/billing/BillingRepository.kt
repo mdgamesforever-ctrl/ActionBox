@@ -90,9 +90,14 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         val params = QueryProductDetailsParams.newBuilder().setProductList(listOf(product)).build()
-        billingClient.queryProductDetailsAsync(params) { result, productDetailsList ->
+        billingClient.queryProductDetailsAsync(params) { result, productDetailsResult ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                val details = productDetailsList.firstOrNull()
+                // Billing Library 8 changed this callback's second parameter from a plain
+                // List<ProductDetails> to QueryProductDetailsResult, which separates
+                // successfully-fetched products from unfetchedProductList (e.g. a mistyped or
+                // unpublished product id) — this app only has the one product, so the fetched
+                // list alone is still enough to tell "found" from "not found".
+                val details = productDetailsResult.productDetailsList.firstOrNull()
                 _productDetails.value = details
                 _billingUnavailable.value = details == null
             } else {
