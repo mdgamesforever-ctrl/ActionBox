@@ -1,6 +1,7 @@
 package com.futurepath.actionbox.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -46,6 +47,15 @@ interface NotificationDao {
     // pressed repeatedly without piling up duplicate fictional rows each time.
     @Query("DELETE FROM captured_notifications WHERE notificationKey LIKE 'demo-%'")
     suspend fun deleteDemoNotifications()
+
+    // Permanent removal — see ui/recovery/RecoveryScreen's swipe-to-delete and multi-select
+    // delete. Takes the full entity (not just an id) so NotificationRepository.restoreNotification
+    // can re-insert exactly the same row for the swipe's undo Snackbar.
+    @Delete
+    suspend fun delete(notification: NotificationEntity)
+
+    @Delete
+    suspend fun deleteAll(notifications: List<NotificationEntity>)
 
     // See NotificationEntity.waitingNudgedAt — marks a WAITING item as already followed up on
     // so com.futurepath.actionbox.reminders.WaitingNudgeWorker never nudges it twice.

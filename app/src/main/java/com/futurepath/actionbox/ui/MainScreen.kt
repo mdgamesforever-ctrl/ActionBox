@@ -241,6 +241,9 @@ fun MainScreen(
                     onCorrect = viewModel::correctClassification,
                     onRestoreHandled = viewModel::undoHandled,
                     onRestoreSnoozed = viewModel::undoSnooze,
+                    onDeleteNotification = viewModel::deleteNotification,
+                    onDeleteNotifications = viewModel::deleteNotifications,
+                    onRestoreNotification = viewModel::restoreNotification,
                     isPro = isPro
                 )
             }

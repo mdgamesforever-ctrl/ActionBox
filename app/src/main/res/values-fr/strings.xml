@@ -46,6 +46,10 @@
     <string name="action_cancel">Annuler</string>
     <string name="action_add">Ajouter</string>
     <string name="action_remove">Supprimer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_select">Sélectionner</string>
+    <string name="action_select_all">Tout sélectionner</string>
+    <string name="action_deselect_all">Tout désélectionner</string>
     <string name="action_copy">Copier</string>
     <string name="action_share">Partager</string>
     <string name="action_manage">Gérer</string>
@@ -89,6 +93,13 @@
     <string name="recovery_empty_all">Rien de traité ni de reporté pour le moment.</string>
     <string name="recovery_empty_snoozed">Rien de reporté pour le moment.</string>
     <string name="recovery_empty_handled">Rien de traité pour l\'instant.</string>
+    <string name="snackbar_deleted">Supprimé</string>
+    <string name="recovery_selected_count">%1$d sélectionné(s)</string>
+    <string name="recovery_delete_confirm_body">Cette action est irréversible.</string>
+    <plurals name="recovery_delete_confirm_title">
+        <item quantity="one">Supprimer %1$d élément ?</item>
+        <item quantity="other">Supprimer %1$d éléments ?</item>
+    </plurals>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Partager le journal des plantages</string>

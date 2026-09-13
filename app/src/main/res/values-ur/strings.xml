@@ -46,6 +46,10 @@
     <string name="action_cancel">منسوخ کریں</string>
     <string name="action_add">شامل کریں</string>
     <string name="action_remove">ہٹائیں</string>
+    <string name="action_delete">حذف کریں</string>
+    <string name="action_select">منتخب کریں</string>
+    <string name="action_select_all">سب منتخب کریں</string>
+    <string name="action_deselect_all">سب غیر منتخب کریں</string>
     <string name="action_copy">کاپی کریں</string>
     <string name="action_share">شیئر کریں</string>
     <string name="action_manage">منظم کریں</string>
@@ -89,6 +93,13 @@
     <string name="recovery_empty_all">ابھی کچھ بھی نمٹایا یا ملتوی نہیں ہے۔</string>
     <string name="recovery_empty_snoozed">ابھی کچھ بھی ملتوی نہیں ہے۔</string>
     <string name="recovery_empty_handled">ابھی تک کچھ بھی نہیں نمٹایا گیا۔</string>
+    <string name="snackbar_deleted">حذف کر دیا گیا</string>
+    <string name="recovery_selected_count">%1$d منتخب</string>
+    <string name="recovery_delete_confirm_body">اسے واپس نہیں لایا جا سکتا۔</string>
+    <plurals name="recovery_delete_confirm_title">
+        <item quantity="one">%1$d آئٹم حذف کریں؟</item>
+        <item quantity="other">%1$d آئٹمز حذف کریں؟</item>
+    </plurals>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">کریش لاگ شیئر کریں</string>

@@ -199,6 +199,29 @@ class NotificationRepository(context: Context) {
     }
 
     /**
+     * Permanent removal from storage — see ui/recovery/RecoveryScreen, which is the only place
+     * this is reachable from (swipe-to-delete on one row, or the multi-select "Delete" action).
+     * Available to both Free and Pro users; unlike [enforceRetentionPolicy], nothing here is
+     * plan-gated.
+     */
+    suspend fun deleteNotification(notification: NotificationEntity) = dao.delete(notification)
+
+    suspend fun deleteNotifications(notifications: List<NotificationEntity>) = dao.deleteAll(notifications)
+
+    /**
+     * Re-inserts a just-deleted row exactly as it was, [NotificationEntity.id] included — safe
+     * because that id is a now-free primary key immediately after the delete that produced it,
+     * with nothing else able to claim it in between (this only ever runs from the swipe-to-delete
+     * undo Snackbar, a few seconds later at most). Used instead of clearing a flag the way
+     * undoHandled/undoSnooze do, since a hard delete has no flag to clear.
+     */
+    suspend fun restoreNotification(notification: NotificationEntity) = dao.insertRaw(notification)
+
+    suspend fun restoreNotifications(notifications: List<NotificationEntity>) {
+        notifications.forEach { dao.insertRaw(it) }
+    }
+
+    /**
      * Debug-only screenshot aid (see SettingsScreen's "Debug tools" section, which the whole
      * feature is gated behind — R8 dead-code-eliminates the call site out of release builds).
      * Inserts one fictional notification per [ClassifiedState] so Play Store screenshots can be

@@ -46,6 +46,10 @@
     <string name="action_cancel">İptal</string>
     <string name="action_add">Ekle</string>
     <string name="action_remove">Kaldır</string>
+    <string name="action_delete">Sil</string>
+    <string name="action_select">Seç</string>
+    <string name="action_select_all">Tümünü seç</string>
+    <string name="action_deselect_all">Tüm seçimi kaldır</string>
     <string name="action_copy">Kopyala</string>
     <string name="action_share">Paylaş</string>
     <string name="action_manage">Yönet</string>
@@ -89,6 +93,13 @@
     <string name="recovery_empty_all">Şu anda işlenen veya ertelenen bir şey yok.</string>
     <string name="recovery_empty_snoozed">Şu anda ertelenen bir şey yok.</string>
     <string name="recovery_empty_handled">Henüz işlenen bir şey yok.</string>
+    <string name="snackbar_deleted">Silindi</string>
+    <string name="recovery_selected_count">%1$d seçildi</string>
+    <string name="recovery_delete_confirm_body">Bu işlem geri alınamaz.</string>
+    <plurals name="recovery_delete_confirm_title">
+        <item quantity="one">%1$d öğeyi sil?</item>
+        <item quantity="other">%1$d öğeyi sil?</item>
+    </plurals>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Çökme günlüğünü paylaş</string>

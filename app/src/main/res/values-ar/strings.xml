@@ -46,6 +46,10 @@
     <string name="action_cancel">إلغاء</string>
     <string name="action_add">إضافة</string>
     <string name="action_remove">إزالة</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_select">تحديد</string>
+    <string name="action_select_all">تحديد الكل</string>
+    <string name="action_deselect_all">إلغاء تحديد الكل</string>
     <string name="action_copy">نسخ</string>
     <string name="action_share">مشاركة</string>
     <string name="action_manage">إدارة</string>
@@ -89,6 +93,17 @@
     <string name="recovery_empty_all">لا يوجد شيء تمت معالجته أو تأجيله الآن.</string>
     <string name="recovery_empty_snoozed">لا يوجد شيء مؤجل الآن.</string>
     <string name="recovery_empty_handled">لم تتم معالجة أي شيء بعد.</string>
+    <string name="snackbar_deleted">تم الحذف</string>
+    <string name="recovery_selected_count">تم تحديد %1$d</string>
+    <string name="recovery_delete_confirm_body">لا يمكن التراجع عن هذا.</string>
+    <plurals name="recovery_delete_confirm_title">
+        <item quantity="zero">حذف العناصر؟</item>
+        <item quantity="one">حذف عنصر واحد؟</item>
+        <item quantity="two">حذف عنصرين؟</item>
+        <item quantity="few">حذف %1$d عناصر؟</item>
+        <item quantity="many">حذف %1$d عنصرًا؟</item>
+        <item quantity="other">حذف %1$d عنصر؟</item>
+    </plurals>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">مشاركة سجل الأعطال</string>

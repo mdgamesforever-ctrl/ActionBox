@@ -46,6 +46,10 @@
     <string name="action_cancel">Annulla</string>
     <string name="action_add">Aggiungi</string>
     <string name="action_remove">Rimuovi</string>
+    <string name="action_delete">Elimina</string>
+    <string name="action_select">Seleziona</string>
+    <string name="action_select_all">Seleziona tutto</string>
+    <string name="action_deselect_all">Deseleziona tutto</string>
     <string name="action_copy">Copia</string>
     <string name="action_share">Condividi</string>
     <string name="action_manage">Gestisci</string>
@@ -89,6 +93,13 @@
     <string name="recovery_empty_all">Nessun elemento gestito o posticipato al momento.</string>
     <string name="recovery_empty_snoozed">Nessun elemento posticipato al momento.</string>
     <string name="recovery_empty_handled">Nessun elemento gestito finora.</string>
+    <string name="snackbar_deleted">Eliminato</string>
+    <string name="recovery_selected_count">%1$d selezionati</string>
+    <string name="recovery_delete_confirm_body">Questa azione non può essere annullata.</string>
+    <plurals name="recovery_delete_confirm_title">
+        <item quantity="one">Eliminare %1$d elemento?</item>
+        <item quantity="other">Eliminare %1$d elementi?</item>
+    </plurals>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Condividi registro dei crash</string>

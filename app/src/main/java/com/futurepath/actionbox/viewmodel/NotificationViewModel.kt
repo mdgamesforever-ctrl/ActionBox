@@ -183,6 +183,28 @@ class NotificationViewModel(
         }
     }
 
+    /** Swipe-to-delete on the recovery screen (ui/recovery/RecoveryScreen) — permanent, unlike
+     * markHandled/snooze above. */
+    fun deleteNotification(notification: NotificationEntity) {
+        viewModelScope.launch {
+            repository.deleteNotification(notification)
+        }
+    }
+
+    /** The recovery screen's multi-select "Delete" action. */
+    fun deleteNotifications(notifications: List<NotificationEntity>) {
+        viewModelScope.launch {
+            repository.deleteNotifications(notifications)
+        }
+    }
+
+    /** The undo action on the recovery screen's swipe-to-delete snackbar. */
+    fun restoreNotification(notification: NotificationEntity) {
+        viewModelScope.launch {
+            repository.restoreNotification(notification)
+        }
+    }
+
     fun setCorrectionLearningEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCorrectionLearningEnabled(enabled)

@@ -10,10 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,8 +30,7 @@ import com.futurepath.actionbox.data.NotificationEntity
 import com.futurepath.actionbox.reminders.SnoozeCalculator
 import com.futurepath.actionbox.reminders.SnoozeDuration
 import com.futurepath.actionbox.ui.components.SwipeableNotificationCard
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import com.futurepath.actionbox.ui.components.showUndoSnackbar
 import java.text.DateFormat
 import java.util.Date
 
@@ -123,33 +120,6 @@ fun CategoryInboxScreen(
             },
             onDismiss = { snoozeTargetId = null }
         )
-    }
-}
-
-/**
- * Shows a single "[message]" + Undo snackbar, calling [onUndo] if the user taps it before it
- * auto-dismisses (~4s, [SnackbarDuration.Short]). Dismisses whatever snackbar is currently
- * showing first — rather than letting [SnackbarHostState.showSnackbar]'s default queuing behavior
- * queue this one up behind it — so swiping a second item before the first snackbar times out
- * replaces it immediately with the latest action's undo option instead of stacking/delaying it.
- */
-private fun showUndoSnackbar(
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    message: String,
-    actionLabel: String,
-    onUndo: () -> Unit
-) {
-    scope.launch {
-        snackbarHostState.currentSnackbarData?.dismiss()
-        val result = snackbarHostState.showSnackbar(
-            message = message,
-            actionLabel = actionLabel,
-            duration = SnackbarDuration.Short
-        )
-        if (result == SnackbarResult.ActionPerformed) {
-            onUndo()
-        }
     }
 }
 

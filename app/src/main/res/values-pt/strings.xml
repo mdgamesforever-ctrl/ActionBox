@@ -46,6 +46,10 @@
     <string name="action_cancel">Cancelar</string>
     <string name="action_add">Adicionar</string>
     <string name="action_remove">Remover</string>
+    <string name="action_delete">Excluir</string>
+    <string name="action_select">Selecionar</string>
+    <string name="action_select_all">Selecionar tudo</string>
+    <string name="action_deselect_all">Desmarcar tudo</string>
     <string name="action_copy">Copiar</string>
     <string name="action_share">Compartilhar</string>
     <string name="action_manage">Gerenciar</string>
@@ -89,6 +93,13 @@
     <string name="recovery_empty_all">Nada tratado ou adiado no momento.</string>
     <string name="recovery_empty_snoozed">Nada adiado no momento.</string>
     <string name="recovery_empty_handled">Nada tratado ainda.</string>
+    <string name="snackbar_deleted">Excluído</string>
+    <string name="recovery_selected_count">%1$d selecionados</string>
+    <string name="recovery_delete_confirm_body">Isso não pode ser desfeito.</string>
+    <plurals name="recovery_delete_confirm_title">
+        <item quantity="one">Excluir %1$d item?</item>
+        <item quantity="other">Excluir %1$d itens?</item>
+    </plurals>
 
     <!-- Crash log -->
     <string name="crash_log_share_chooser_title">Compartilhar registro de falhas</string>
