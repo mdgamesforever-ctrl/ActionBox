@@ -31,8 +31,11 @@ android {
         applicationId = "com.futurepath.actionbox"
         minSdk = 26
         targetSdk = 36
-        // First Play Store submission.
-        versionCode = 1
+        // versionCode 1 was already consumed by a prior upload attempt (Play Console rejected
+        // a same-versionCode re-upload outright, even though that first .aab was never
+        // actually published to any track) — versionCode must strictly increase per upload,
+        // versionName stays a purely cosmetic label independent of it.
+        versionCode = 2
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
