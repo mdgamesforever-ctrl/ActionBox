@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.futurepath.actionbox.BuildConfig
 import com.futurepath.actionbox.R
-import com.futurepath.actionbox.billing.BillingRepository
 import com.futurepath.actionbox.data.AppLanguage
 import com.futurepath.actionbox.data.DigestTime
 import com.futurepath.actionbox.data.NotificationRepository
@@ -232,9 +231,12 @@ fun SettingsScreen(
 }
 
 private fun openManageSubscription(context: Context) {
+    // No `sku` param: a Pro user may be on either PRO_MONTHLY_PRODUCT_ID or
+    // PRO_YEARLY_PRODUCT_ID, and this screen doesn't track which — Play's subscriptions page
+    // filtered by `package` alone already shows only this app's subscription(s), which is all
+    // that's needed here.
     val uri = Uri.parse(
-        "https://play.google.com/store/account/subscriptions" +
-            "?sku=${BillingRepository.PRO_SUBSCRIPTION_PRODUCT_ID}&package=${context.packageName}"
+        "https://play.google.com/store/account/subscriptions?package=${context.packageName}"
     )
     context.startActivity(Intent(Intent.ACTION_VIEW, uri))
 }

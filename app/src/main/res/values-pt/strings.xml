@@ -138,6 +138,9 @@
     <string name="paywall_period_3_months">3 meses</string>
     <string name="paywall_period_6_months">6 meses</string>
     <string name="paywall_period_year">ano</string>
+    <string name="paywall_plan_monthly">Mensal</string>
+    <string name="paywall_plan_yearly">Anual</string>
+    <string name="paywall_savings_badge">Economize %1$d%%</string>
 
     <!-- Settings -->
     <string name="settings_section_plan">Plano</string>

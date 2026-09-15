@@ -138,6 +138,9 @@
     <string name="paywall_period_3_months">3 ay</string>
     <string name="paywall_period_6_months">6 ay</string>
     <string name="paywall_period_year">yıl</string>
+    <string name="paywall_plan_monthly">Aylık</string>
+    <string name="paywall_plan_yearly">Yıllık</string>
+    <string name="paywall_savings_badge">%%%1$d tasarruf edin</string>
 
     <!-- Settings -->
     <string name="settings_section_plan">Plan</string>

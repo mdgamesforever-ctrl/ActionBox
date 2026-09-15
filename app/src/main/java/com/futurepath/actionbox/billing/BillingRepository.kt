@@ -25,16 +25,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Wraps Google Play Billing for the Pro subscription. [SettingsRepository.isPro] is the single
- * source of truth every other part of the app reads (retention enforcement, the correction-
- * learning gate, the ad banner) — this class's whole job is keeping that flag in sync with
- * Play's actual entitlement state, never gating anything directly itself.
+ * Wraps Google Play Billing for the Pro subscription, offered as two separate products —
+ * [PRO_MONTHLY_PRODUCT_ID] and [PRO_YEARLY_PRODUCT_ID] — rather than one product with multiple
+ * base plans, matching how they're configured in the Play Console listing.
+ * [SettingsRepository.isPro] is the single source of truth every other part of the app reads
+ * (retention enforcement, the correction-learning gate, the ad banner) — this class's whole job
+ * is keeping that flag in sync with Play's actual entitlement state for *either* plan, never
+ * gating anything directly itself, and never distinguishing which plan a Pro user is on (nothing
+ * elsewhere in the app needs to know that — Pro is Pro).
  *
- * There is no Play Console listing behind [PRO_SUBSCRIPTION_PRODUCT_ID] in this environment
- * (no device/Play Store access — see the project's standing testing constraints), so
- * `queryProductDetailsAsync`/purchases will simply come back empty here; [billingUnavailable]
- * surfaces that to the paywall UI as "try again later" rather than a silent dead button, which
- * is also the correct behavior for a real user with no network or a Play Store outage.
+ * There is no Play Console listing behind either product id in this environment (no device/Play
+ * Store access — see the project's standing testing constraints), so `queryProductDetailsAsync`/
+ * purchases will simply come back empty here; [billingUnavailable] surfaces that to the paywall
+ * UI as "try again later" rather than a silent dead button, which is also the correct behavior
+ * for a real user with no network or a Play Store outage.
  */
 class BillingRepository private constructor(context: Context) : PurchasesUpdatedListener {
 
@@ -52,8 +56,11 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
 
-    private val _productDetails = MutableStateFlow<ProductDetails?>(null)
-    val productDetails: StateFlow<ProductDetails?> = _productDetails.asStateFlow()
+    private val _monthlyProductDetails = MutableStateFlow<ProductDetails?>(null)
+    val monthlyProductDetails: StateFlow<ProductDetails?> = _monthlyProductDetails.asStateFlow()
+
+    private val _yearlyProductDetails = MutableStateFlow<ProductDetails?>(null)
+    val yearlyProductDetails: StateFlow<ProductDetails?> = _yearlyProductDetails.asStateFlow()
 
     /** True once billing setup has failed or come back without the Pro product — the paywall
      * shows this as "try again later" rather than leaving a Subscribe button that can never
@@ -85,21 +92,25 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
     }
 
     private fun queryProductDetails() {
-        val product = QueryProductDetailsParams.Product.newBuilder()
-            .setProductId(PRO_SUBSCRIPTION_PRODUCT_ID)
-            .setProductType(BillingClient.ProductType.SUBS)
-            .build()
-        val params = QueryProductDetailsParams.newBuilder().setProductList(listOf(product)).build()
+        val products = PRO_PRODUCT_IDS.map { productId ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(productId)
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+        }
+        val params = QueryProductDetailsParams.newBuilder().setProductList(products).build()
         billingClient.queryProductDetailsAsync(params) { result, productDetailsResult ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 // Billing Library 8 changed this callback's second parameter from a plain
                 // List<ProductDetails> to QueryProductDetailsResult, which separates
                 // successfully-fetched products from unfetchedProductList (e.g. a mistyped or
-                // unpublished product id) — this app only has the one product, so the fetched
-                // list alone is still enough to tell "found" from "not found".
-                val details = productDetailsResult.productDetailsList.firstOrNull()
-                _productDetails.value = details
-                _billingUnavailable.value = details == null
+                // unpublished product id) — matched back to monthly/yearly by productId since
+                // the two can come back in either order (or one missing, if only one plan is
+                // actually configured/active in the Play Console listing).
+                val details = productDetailsResult.productDetailsList
+                _monthlyProductDetails.value = details.firstOrNull { it.productId == PRO_MONTHLY_PRODUCT_ID }
+                _yearlyProductDetails.value = details.firstOrNull { it.productId == PRO_YEARLY_PRODUCT_ID }
+                _billingUnavailable.value = details.isEmpty()
             } else {
                 Log.w(TAG, "queryProductDetailsAsync failed: ${result.debugMessage} (${result.responseCode})")
                 _billingUnavailable.value = true
@@ -131,8 +142,9 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
                 Log.w(TAG, "queryPurchasesAsync failed: ${result.debugMessage} (${result.responseCode})")
                 return@queryPurchasesAsync
             }
-            val hasActivePro = purchases.any {
-                PRO_SUBSCRIPTION_PRODUCT_ID in it.products && it.purchaseState == Purchase.PurchaseState.PURCHASED
+            val hasActivePro = purchases.any { purchase ->
+                purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                    purchase.products.any { it in PRO_PRODUCT_IDS }
             }
             if (hasActivePro || !BuildConfig.DEBUG) {
                 scope.launch { settingsRepository.setPro(hasActivePro) }
@@ -141,10 +153,16 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
         }
     }
 
-    /** Launches Play's own purchase UI. No-ops if product details haven't loaded yet — the
-     * paywall screen only enables its Subscribe button once [productDetails] is non-null. */
-    fun launchPurchaseFlow(activity: Activity) {
-        val details = _productDetails.value ?: return
+    /** Launches Play's own purchase UI for whichever plan the user picked on the paywall
+     * ([PRO_MONTHLY_PRODUCT_ID] or [PRO_YEARLY_PRODUCT_ID]). No-ops if that plan's product
+     * details haven't loaded yet — the paywall only enables a plan's button once its own
+     * [monthlyProductDetails]/[yearlyProductDetails] entry is non-null. */
+    fun launchPurchaseFlow(activity: Activity, productId: String) {
+        val details = when (productId) {
+            PRO_MONTHLY_PRODUCT_ID -> _monthlyProductDetails.value
+            PRO_YEARLY_PRODUCT_ID -> _yearlyProductDetails.value
+            else -> null
+        } ?: return
         val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
         val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(details)
@@ -190,9 +208,11 @@ class BillingRepository private constructor(context: Context) : PurchasesUpdated
     companion object {
         private const val TAG = "BillingRepository"
 
-        /** Matches whatever subscription product is configured in the Play Console listing —
-         * not itself a secret, just an id. */
-        const val PRO_SUBSCRIPTION_PRODUCT_ID = "actionbox_pro_subscription"
+        /** Match the two subscription products configured in the Play Console listing — not
+         * secrets, just ids. */
+        const val PRO_MONTHLY_PRODUCT_ID = "actionbox_pro_monthly"
+        const val PRO_YEARLY_PRODUCT_ID = "actionbox_pro_yearly"
+        private val PRO_PRODUCT_IDS = setOf(PRO_MONTHLY_PRODUCT_ID, PRO_YEARLY_PRODUCT_ID)
 
         @Volatile
         private var instance: BillingRepository? = null

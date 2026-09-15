@@ -31,11 +31,10 @@ android {
         applicationId = "com.futurepath.actionbox"
         minSdk = 26
         targetSdk = 36
-        // versionCode 1 was already consumed by a prior upload attempt (Play Console rejected
-        // a same-versionCode re-upload outright, even though that first .aab was never
-        // actually published to any track) — versionCode must strictly increase per upload,
-        // versionName stays a purely cosmetic label independent of it.
-        versionCode = 2
+        // versionCode 1 and 2 were both already consumed by prior upload attempts (2 is what's
+        // currently live on the closed testing track) — versionCode must strictly increase per
+        // upload, versionName stays a purely cosmetic label independent of it.
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

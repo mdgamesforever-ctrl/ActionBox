@@ -140,6 +140,9 @@
     <string name="paywall_period_3_months">3 months</string>
     <string name="paywall_period_6_months">6 months</string>
     <string name="paywall_period_year">year</string>
+    <string name="paywall_plan_monthly">Monthly</string>
+    <string name="paywall_plan_yearly">Yearly</string>
+    <string name="paywall_savings_badge">Save %1$d%%</string>
 
     <!-- Settings -->
     <string name="settings_section_plan">Plan</string>

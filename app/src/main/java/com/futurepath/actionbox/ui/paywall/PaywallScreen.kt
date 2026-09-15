@@ -2,6 +2,8 @@ package com.futurepath.actionbox.ui.paywall
 
 import android.app.Activity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,15 +39,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.android.billingclient.api.ProductDetails
 import com.futurepath.actionbox.R
+import com.futurepath.actionbox.billing.BillingRepository
+import com.futurepath.actionbox.billing.SubscriptionSavingsCalculator
 import com.futurepath.actionbox.data.NotificationRepository
 
 /**
  * The Pro upsell screen — reached from Settings when the user isn't Pro yet (see
- * SettingsScreen's "Upgrade to Pro" button). [productDetails]/[billingUnavailable] come from
- * [com.futurepath.actionbox.billing.BillingRepository] via the view model; this composable is
- * pure presentation over whatever state Play Billing is actually in, including the states a
- * real user can hit (still loading, or genuinely unavailable — no network, Play Store outage,
- * or no listing configured).
+ * SettingsScreen's "Upgrade to Pro" button). [monthlyProductDetails]/[yearlyProductDetails]/
+ * [billingUnavailable] come from [BillingRepository] via the view model (one query, both
+ * products); this composable is pure presentation over whatever state Play Billing is actually
+ * in, including the states a real user can hit (still loading, or genuinely unavailable — no
+ * network, Play Store outage, or no listing configured).
  *
  * Laid out as a Free-vs-Pro feature comparison table rather than a plain checklist — every color
  * here comes from [MaterialTheme.colorScheme] rather than a fixed hex (unlike, e.g.,
@@ -56,9 +60,10 @@ import com.futurepath.actionbox.data.NotificationRepository
  */
 @Composable
 fun PaywallScreen(
-    productDetails: ProductDetails?,
+    monthlyProductDetails: ProductDetails?,
+    yearlyProductDetails: ProductDetails?,
     billingUnavailable: Boolean,
-    onSubscribeClick: (Activity) -> Unit,
+    onSubscribeClick: (Activity, String) -> Unit,
     onRetryClick: () -> Unit,
     onContinueFreeClick: () -> Unit
 ) {
@@ -103,18 +108,44 @@ fun PaywallScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 TextButton(onClick = onRetryClick) { Text(stringResource(R.string.action_try_again)) }
             }
-            productDetails == null -> CircularProgressIndicator()
+            monthlyProductDetails == null && yearlyProductDetails == null -> CircularProgressIndicator()
             else -> {
-                priceLabel(productDetails)?.let { price ->
-                    Text(text = price, style = MaterialTheme.typography.titleLarge)
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-                Button(
-                    onClick = { activity?.let(onSubscribeClick) },
-                    enabled = activity != null,
-                    modifier = Modifier.fillMaxWidth()
+                val savingsPercent = if (monthlyProductDetails != null && yearlyProductDetails != null) {
+                    val monthlyMicros = priceAmountMicros(monthlyProductDetails)
+                    val yearlyMicros = priceAmountMicros(yearlyProductDetails)
+                    if (monthlyMicros != null && yearlyMicros != null) {
+                        SubscriptionSavingsCalculator.yearlySavingsPercent(monthlyMicros, yearlyMicros)
+                    } else null
+                } else null
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(stringResource(R.string.action_subscribe))
+                    monthlyProductDetails?.let { details ->
+                        PlanCard(
+                            modifier = Modifier.weight(1f),
+                            planLabel = stringResource(R.string.paywall_plan_monthly),
+                            productDetails = details,
+                            savingsPercent = null,
+                            enabled = activity != null,
+                            onSubscribeClick = {
+                                activity?.let { onSubscribeClick(it, BillingRepository.PRO_MONTHLY_PRODUCT_ID) }
+                            }
+                        )
+                    }
+                    yearlyProductDetails?.let { details ->
+                        PlanCard(
+                            modifier = Modifier.weight(1f),
+                            planLabel = stringResource(R.string.paywall_plan_yearly),
+                            productDetails = details,
+                            savingsPercent = savingsPercent,
+                            enabled = activity != null,
+                            onSubscribeClick = {
+                                activity?.let { onSubscribeClick(it, BillingRepository.PRO_YEARLY_PRODUCT_ID) }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -122,6 +153,56 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(12.dp))
         TextButton(onClick = onContinueFreeClick) {
             Text(stringResource(R.string.action_continue_with_free))
+        }
+    }
+}
+
+/** One plan's card in the side-by-side Monthly/Yearly picker — each is independently subscribable
+ * (tapping its own button launches Play's purchase flow for exactly that product), rather than a
+ * select-then-confirm two-step flow, since there are only ever two options and a global toggle
+ * over them would be one more tap for no real benefit. [savingsPercent] renders a highlighted
+ * badge when non-null — only ever passed for the yearly card, and only when it's genuinely
+ * cheaper than twelve months of the monthly plan (see [SubscriptionSavingsCalculator]). */
+@Composable
+private fun PlanCard(
+    modifier: Modifier = Modifier,
+    planLabel: String,
+    productDetails: ProductDetails,
+    savingsPercent: Int?,
+    enabled: Boolean,
+    onSubscribeClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = planLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        priceLabel(productDetails)?.let { price ->
+            Text(text = price, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        if (savingsPercent != null) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.paywall_savings_badge, savingsPercent),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        Button(onClick = onSubscribeClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.action_subscribe))
         }
     }
 }
@@ -269,6 +350,17 @@ private fun ComparisonCell(
 @Composable
 private fun pluralStringResourceCompat(days: Int): String =
     androidx.compose.ui.res.pluralStringResource(R.plurals.paywall_retention_days, days, days)
+
+/** The raw price (in micros, Play Billing's native unit) behind [priceLabel]'s formatted string —
+ * used for [SubscriptionSavingsCalculator]'s math, which needs the actual number rather than a
+ * locale-formatted display string. */
+private fun priceAmountMicros(productDetails: ProductDetails): Long? =
+    productDetails.subscriptionOfferDetails
+        ?.firstOrNull()
+        ?.pricingPhases
+        ?.pricingPhaseList
+        ?.firstOrNull()
+        ?.priceAmountMicros
 
 @Composable
 private fun priceLabel(productDetails: ProductDetails): String? {

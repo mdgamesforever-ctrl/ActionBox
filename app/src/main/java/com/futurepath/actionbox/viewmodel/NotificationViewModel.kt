@@ -101,9 +101,10 @@ class NotificationViewModel(
     private val _appLanguage = MutableStateFlow(AppLanguage.SYSTEM_DEFAULT)
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
-    /** The Pro subscription's product details, once Play Billing has loaded them — null until
-     * then, which the paywall (ui/paywall/PaywallScreen) shows as a loading state. */
-    val productDetails: StateFlow<ProductDetails?> = billingRepository.productDetails
+    /** Each plan's product details, once Play Billing has loaded them — null until then, which
+     * the paywall (ui/paywall/PaywallScreen) shows as a loading state for that plan. */
+    val monthlyProductDetails: StateFlow<ProductDetails?> = billingRepository.monthlyProductDetails
+    val yearlyProductDetails: StateFlow<ProductDetails?> = billingRepository.yearlyProductDetails
     val billingUnavailable: StateFlow<Boolean> = billingRepository.billingUnavailable
 
     /** Pro feature — see ui/settings/VipSendersScreen.kt. */
@@ -241,11 +242,13 @@ class NotificationViewModel(
         }
     }
 
-    /** Launches Play's purchase UI for the Pro subscription from the paywall's Subscribe
-     * button. [BillingRepository] itself updates [SettingsRepository.isPro] once the purchase
-     * completes and is acknowledged — nothing further to do here. */
-    fun purchasePro(activity: Activity) {
-        billingRepository.launchPurchaseFlow(activity)
+    /** Launches Play's purchase UI for whichever plan's Subscribe button the user tapped on the
+     * paywall ([BillingRepository.PRO_MONTHLY_PRODUCT_ID] or
+     * [BillingRepository.PRO_YEARLY_PRODUCT_ID]). [BillingRepository] itself updates
+     * [SettingsRepository.isPro] once the purchase completes and is acknowledged, regardless of
+     * which plan it was — nothing further to do here. */
+    fun purchasePro(activity: Activity, productId: String) {
+        billingRepository.launchPurchaseFlow(activity, productId)
     }
 
     /** Re-attempts the Play Billing connection — surfaced as a "try again" action on the

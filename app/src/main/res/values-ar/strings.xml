@@ -142,6 +142,9 @@
     <string name="paywall_period_3_months">3 أشهر</string>
     <string name="paywall_period_6_months">6 أشهر</string>
     <string name="paywall_period_year">سنة</string>
+    <string name="paywall_plan_monthly">شهري</string>
+    <string name="paywall_plan_yearly">سنوي</string>
+    <string name="paywall_savings_badge">وفّر %1$d%%</string>
 
     <!-- Settings -->
     <string name="settings_section_plan">الخطة</string>

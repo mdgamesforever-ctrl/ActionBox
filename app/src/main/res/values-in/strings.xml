@@ -138,6 +138,9 @@
     <string name="paywall_period_3_months">3 bulan</string>
     <string name="paywall_period_6_months">6 bulan</string>
     <string name="paywall_period_year">tahun</string>
+    <string name="paywall_plan_monthly">Bulanan</string>
+    <string name="paywall_plan_yearly">Tahunan</string>
+    <string name="paywall_savings_badge">Hemat %1$d%%</string>
 
     <!-- Settings -->
     <string name="settings_section_plan">Paket</string>

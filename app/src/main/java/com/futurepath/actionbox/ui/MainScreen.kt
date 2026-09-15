@@ -87,7 +87,8 @@ fun MainScreen(
     val digestTime by viewModel.digestTime.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
-    val productDetails by viewModel.productDetails.collectAsStateWithLifecycle()
+    val monthlyProductDetails by viewModel.monthlyProductDetails.collectAsStateWithLifecycle()
+    val yearlyProductDetails by viewModel.yearlyProductDetails.collectAsStateWithLifecycle()
     val billingUnavailable by viewModel.billingUnavailable.collectAsStateWithLifecycle()
     val vipSenders by viewModel.vipSenders.collectAsStateWithLifecycle()
     val weeklyInsights by viewModel.weeklyInsights.collectAsStateWithLifecycle()
@@ -260,7 +261,8 @@ fun MainScreen(
             }
             composable(PAYWALL_ROUTE) {
                 PaywallScreen(
-                    productDetails = productDetails,
+                    monthlyProductDetails = monthlyProductDetails,
+                    yearlyProductDetails = yearlyProductDetails,
                     billingUnavailable = billingUnavailable,
                     onSubscribeClick = viewModel::purchasePro,
                     onRetryClick = viewModel::retryBillingConnection,
