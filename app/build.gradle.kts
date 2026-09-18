@@ -31,12 +31,12 @@ android {
         applicationId = "com.futurepath.actionbox"
         minSdk = 26
         targetSdk = 36
-        // versionCode 1, 2, and 3 were all already consumed by prior upload attempts —
-        // versionCode must strictly increase per upload. versionName bumped to 1.0.1 alongside
-        // it since this build carries an actual feature addition (monthly/yearly Pro plans)
-        // over the original 1.0, not just a re-upload of the same content.
-        versionCode = 4
-        versionName = "1.0.1"
+        // versionCode 1-4 were all already consumed by prior upload attempts (4 is what's
+        // currently live on the closed testing track) — versionCode must strictly increase per
+        // upload. versionName bumped to 1.0.2: this build fixes the paywall not auto-dismissing
+        // after a successful purchase.
+        versionCode = 5
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

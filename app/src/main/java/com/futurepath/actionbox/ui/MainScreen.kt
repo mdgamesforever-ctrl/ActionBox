@@ -260,6 +260,17 @@ fun MainScreen(
                 WeeklyInsightsScreen(insights = weeklyInsights)
             }
             composable(PAYWALL_ROUTE) {
+                // Play Billing's purchase acknowledgement is asynchronous (BillingRepository's
+                // onPurchasesUpdated -> handlePurchase -> settingsRepository.setPro(true), off
+                // the UI thread relative to the purchase sheet closing) — isPro turning true
+                // while this screen is still the active back stack entry was previously observed
+                // by nothing: PaywallScreen itself only reacts to productDetails/
+                // billingUnavailable, so the paywall stayed on-screen showing "Upgrade to Pro"
+                // until the user backed out and back in, even though isPro (and everything
+                // gated on it elsewhere, like the ad banner) had already updated correctly.
+                // Popping back here matches onContinueFreeClick below: leaving the paywall is
+                // exactly what "you're Pro now" means from a navigation standpoint.
+                PaywallAutoDismissEffect(isPro = isPro, onProUnlocked = { navController.popBackStack() })
                 PaywallScreen(
                     monthlyProductDetails = monthlyProductDetails,
                     yearlyProductDetails = yearlyProductDetails,
@@ -282,6 +293,24 @@ fun MainScreen(
                     isPro = isPro
                 )
             }
+        }
+    }
+}
+
+/**
+ * Fires [onProUnlocked] the moment [isPro] becomes true — the paywall's auto-dismiss-on-purchase
+ * behavior, extracted out of the `composable(PAYWALL_ROUTE) { }` block above so it's unit
+ * testable without a real [androidx.navigation.NavController] (see
+ * MainScreenPaywallAutoDismissTest). Keyed on [isPro] itself: fires once on the false-to-true
+ * transition and never again while it stays true (a recomposition for an unrelated reason, e.g.
+ * theme change, doesn't re-trigger it), matching [LaunchedEffect]'s restart-on-key-change
+ * semantics.
+ */
+@Composable
+internal fun PaywallAutoDismissEffect(isPro: Boolean, onProUnlocked: () -> Unit) {
+    LaunchedEffect(isPro) {
+        if (isPro) {
+            onProUnlocked()
         }
     }
 }
