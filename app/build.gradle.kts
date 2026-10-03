@@ -33,10 +33,9 @@ android {
         targetSdk = 36
         // versionCode 1-4 were all already consumed by prior upload attempts (4 is what's
         // currently live on the closed testing track) — versionCode must strictly increase per
-        // upload. versionName bumped to 1.0.2: this build fixes the paywall not auto-dismissing
-        // after a successful purchase.
-        versionCode = 5
-        versionName = "1.0.2"
+        // upload. versionName 1.0.3: 16 KB page-size support (LiteRT swap) on top of the paywall fix.
+        versionCode = 6
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -181,7 +180,11 @@ dependencies {
     // API only, not the Task/Support Library — the model takes a plain fixed-size float
     // vector rather than raw text needing built-in tokenization, so those extra helpers would
     // just be unused footprint.
-    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    // LiteRT is TensorFlow Lite's renamed successor and keeps the same org.tensorflow.lite.Interpreter
+    // API. Swapped in from org.tensorflow:tensorflow-lite:2.14.0 because that artifact's
+    // libtensorflowlite_jni.so is 4 KB-aligned (ELF p_align 0x1000), which Play Console rejects as
+    // "does not support 16 KB memory page sizes"; LiteRT 1.4.x ships it 16 KB-aligned (0x4000).
+    implementation("com.google.ai.edge.litert:litert:1.4.2")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

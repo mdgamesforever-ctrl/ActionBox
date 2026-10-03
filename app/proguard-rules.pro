@@ -46,7 +46,7 @@
 -keep enum com.futurepath.actionbox.data.LearningPatternType { *; }
 
 # ---- On-device ML classifier (ml/TfliteNotificationClassifier.kt) ----
-# The tensorflow-lite AAR bundles its own consumer ProGuard rules for the native/JNI-bound
+# The LiteRT (formerly tensorflow-lite) AAR bundles its own consumer ProGuard rules for the native/JNI-bound
 # Interpreter classes, so no manual rules are needed for the library itself. Our own wrapper's
 # public surface is kept since HybridClassifier calls it from elsewhere in the app.
 -keep class com.futurepath.actionbox.ml.TfliteNotificationClassifier { public *; }
