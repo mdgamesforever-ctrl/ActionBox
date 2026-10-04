@@ -42,6 +42,9 @@
     <string name="action_search">Ara</string>
     <string name="action_continue">Devam Et</string>
     <string name="action_undo">Geri Al</string>
+    <string name="action_pin">Sabitle</string>
+    <string name="action_unpin">Sabitlemeyi kaldır</string>
+    <string name="action_open_app">Uygulamayı aç</string>
     <string name="action_restore">Geri Yükle</string>
     <string name="action_cancel">İptal</string>
     <string name="action_add">Ekle</string>

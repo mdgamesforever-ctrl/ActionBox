@@ -206,6 +206,7 @@ fun MainScreen(
                         onUndoHandled = viewModel::undoHandled,
                         onSnooze = viewModel::snooze,
                         onUndoSnooze = viewModel::undoSnooze,
+                        onTogglePin = viewModel::setPinned,
                         isPro = isPro
                     )
                 }

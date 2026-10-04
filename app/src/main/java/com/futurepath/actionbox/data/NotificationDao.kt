@@ -40,7 +40,7 @@ interface NotificationDao {
      * (the message's own time), not [NotificationEntity.capturedAt] (device insert time), so
      * retention is measured from when the notification actually happened.
      */
-    @Query("DELETE FROM captured_notifications WHERE timestamp < :cutoffTimestamp")
+    @Query("DELETE FROM captured_notifications WHERE timestamp < :cutoffTimestamp AND pinnedAt IS NULL")
     suspend fun deleteOlderThan(cutoffTimestamp: Long)
 
     /**
@@ -78,6 +78,10 @@ interface NotificationDao {
     // so com.futurepath.actionbox.reminders.WaitingNudgeWorker never nudges it twice.
     @Query("UPDATE captured_notifications SET waitingNudgedAt = :nudgedAt WHERE id = :id")
     suspend fun markWaitingNudged(id: Long, nudgedAt: Long)
+
+    // See NotificationEntity.pinnedAt.
+    @Query("UPDATE captured_notifications SET pinnedAt = :pinnedAt WHERE id = :id")
+    suspend fun setPinnedAt(id: Long, pinnedAt: Long?)
 
     // See NotificationEntity.handledAt — swipe-right in the grouped inbox. A null value
     // un-marks it (used for the swipe's "Undo" snackbar action).

@@ -34,8 +34,8 @@ android {
         // versionCode 1-4 were all already consumed by prior upload attempts (4 is what's
         // currently live on the closed testing track) — versionCode must strictly increase per
         // upload. versionName 1.0.3: 16 KB page-size support (LiteRT swap) on top of the paywall fix.
-        versionCode = 6
-        versionName = "1.0.3"
+        versionCode = 7
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

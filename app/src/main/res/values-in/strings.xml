@@ -42,6 +42,9 @@
     <string name="action_search">Cari</string>
     <string name="action_continue">Lanjutkan</string>
     <string name="action_undo">Urungkan</string>
+    <string name="action_pin">Sematkan</string>
+    <string name="action_unpin">Lepas sematan</string>
+    <string name="action_open_app">Buka aplikasi</string>
     <string name="action_restore">Pulihkan</string>
     <string name="action_cancel">Batal</string>
     <string name="action_add">Tambah</string>

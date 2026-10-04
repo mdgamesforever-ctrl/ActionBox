@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.futurepath.actionbox.R
 import com.futurepath.actionbox.classification.ClassifiedState
 import com.futurepath.actionbox.data.NotificationEntity
+import com.futurepath.actionbox.data.sortedPinnedFirst
 import com.futurepath.actionbox.reminders.SnoozeCalculator
 import com.futurepath.actionbox.reminders.SnoozeDuration
 import com.futurepath.actionbox.ui.components.SwipeableNotificationCard
@@ -55,10 +56,11 @@ fun CategoryInboxScreen(
     onUndoHandled: (id: Long) -> Unit,
     onSnooze: (id: Long, duration: SnoozeDuration) -> Unit,
     onUndoSnooze: (id: Long) -> Unit,
+    onTogglePin: (id: Long, pinned: Boolean) -> Unit,
     isPro: Boolean = false
 ) {
     val items = tab.states.flatMap { itemsByCategory[it].orEmpty() }
-        .sortedByDescending { it.timestamp }
+        .sortedPinnedFirst()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -93,6 +95,7 @@ fun CategoryInboxScreen(
                         notification = notification,
                         onCorrect = onCorrect,
                         isPro = isPro,
+                        onTogglePin = onTogglePin,
                         onMarkHandled = { id ->
                             onMarkHandled(id)
                             showUndoSnackbar(scope, snackbarHostState, markedHandledMessage, undoActionLabel) {

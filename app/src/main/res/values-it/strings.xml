@@ -42,6 +42,9 @@
     <string name="action_search">Cerca</string>
     <string name="action_continue">Continua</string>
     <string name="action_undo">Annulla</string>
+    <string name="action_pin">Fissa</string>
+    <string name="action_unpin">Rimuovi</string>
+    <string name="action_open_app">Apri app</string>
     <string name="action_restore">Ripristina</string>
     <string name="action_cancel">Annulla</string>
     <string name="action_add">Aggiungi</string>

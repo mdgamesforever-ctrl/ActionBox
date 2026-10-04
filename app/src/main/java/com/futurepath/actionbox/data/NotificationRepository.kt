@@ -36,6 +36,10 @@ class NotificationRepository(context: Context) {
     /** See [NotificationEntity.waitingNudgedAt]. */
     suspend fun markWaitingNudged(id: Long, nudgedAt: Long) = dao.markWaitingNudged(id, nudgedAt)
 
+    /** Pin/unpin from the card's pin button — see [NotificationEntity.pinnedAt]. */
+    suspend fun setPinned(id: Long, pinned: Boolean) =
+        dao.setPinnedAt(id, if (pinned) System.currentTimeMillis() else null)
+
     /** Swipe-right in the grouped inbox. [handled] false is the snackbar "Undo" action —
      * see [NotificationEntity.handledAt]. */
     suspend fun setHandled(id: Long, handled: Boolean) =

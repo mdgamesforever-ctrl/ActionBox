@@ -1,7 +1,19 @@
 package com.futurepath.actionbox.ui.components
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,7 +71,8 @@ import java.util.Date
 fun NotificationCard(
     notification: NotificationEntity,
     onCorrect: (Long, ClassifiedState) -> Unit,
-    isPro: Boolean = false
+    isPro: Boolean = false,
+    onTogglePin: ((Long, Boolean) -> Unit)? = null
 ) {
     // Confidence scoring itself always runs (see NotificationEntity.confidenceScore /
     // ConfidenceTier) — only its visual surfacing here is gated. Real users on the Play Store
@@ -82,11 +95,47 @@ fun NotificationCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .let { base ->
+                if (notification.pinnedAt != null) base.border(1.5.dp, MaterialTheme.colorScheme.primary, CardDefaults.shape) else base
+            }
             .let { base -> attentionTier?.let { base.dashedBorder(attentionColor(it)) } ?: base }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Column {
-                Text(text = notification.sourceApp, style = MaterialTheme.typography.labelMedium)
+                val context = LocalContext.current
+                val appInfo = rememberAppInfo(notification.sourceApp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    appInfo?.icon?.let { icon ->
+                        Image(
+                            bitmap = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp).clip(RoundedCornerShape(6.dp))
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = appInfo?.label ?: notification.sourceApp,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (appInfo?.canOpen == true) {
+                        IconButton(onClick = { openSourceApp(context, notification.sourceApp) }) {
+                            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = stringResource(R.string.action_open_app))
+                        }
+                    }
+                    if (onTogglePin != null) {
+                        val pinned = notification.pinnedAt != null
+                        IconButton(onClick = { onTogglePin(notification.id, !pinned) }) {
+                            Icon(
+                                if (pinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                                contentDescription = stringResource(if (pinned) R.string.action_unpin else R.string.action_pin),
+                                tint = if (pinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
                 displayedState?.let { state ->
                     StateBadge(
                         state = state,

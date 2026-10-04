@@ -160,6 +160,13 @@ class NotificationViewModel(
         }
     }
 
+    /** The pin button on a notification card. */
+    fun setPinned(id: Long, pinned: Boolean) {
+        viewModelScope.launch {
+            repository.setPinned(id, pinned)
+        }
+    }
+
     /** Swipe-right in the grouped inbox. */
     fun markHandled(id: Long) {
         viewModelScope.launch {

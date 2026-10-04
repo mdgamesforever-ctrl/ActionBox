@@ -41,6 +41,7 @@ fun SwipeableNotificationCard(
     onCorrect: (Long, ClassifiedState) -> Unit,
     onMarkHandled: (Long) -> Unit,
     onOpenSnooze: (Long) -> Unit,
+    onTogglePin: ((Long, Boolean) -> Unit)? = null,
     isPro: Boolean = false
 ) {
     val state = rememberSwipeToDismissBoxState(
@@ -63,7 +64,7 @@ fun SwipeableNotificationCard(
         state = state,
         backgroundContent = { SwipeBackground(state.targetValue) }
     ) {
-        NotificationCard(notification, onCorrect, isPro)
+        NotificationCard(notification, onCorrect, isPro, onTogglePin)
     }
 }
 

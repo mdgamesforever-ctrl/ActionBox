@@ -42,6 +42,9 @@
     <string name="action_search">Rechercher</string>
     <string name="action_continue">Continuer</string>
     <string name="action_undo">Annuler</string>
+    <string name="action_pin">Épingler</string>
+    <string name="action_unpin">Désépingler</string>
+    <string name="action_open_app">Ouvrir l\'app</string>
     <string name="action_restore">Restaurer</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_add">Ajouter</string>

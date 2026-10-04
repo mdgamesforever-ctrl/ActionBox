@@ -74,7 +74,11 @@ data class NotificationEntity(
     // so it's only ever non-null while the item currently IS snoozed. Exists for
     // NotificationRepository.enforceRecoveryRetentionPolicy, which needs "how long has this sat
     // in the recovery screen" and would get the wrong answer from snoozedUntil for that.
-    val snoozedAt: Long? = null
+    val snoozedAt: Long? = null,
+    // Set when the user pins the item ("important, not urgent — keep it in front of me").
+    // Pinned items sort to the top of their category and are exempt from the free-tier
+    // retention sweep (NotificationDao.deleteOlderThan); null means not pinned.
+    val pinnedAt: Long? = null
 )
 
 /**
@@ -96,3 +100,11 @@ val NotificationEntity.effectiveState: ClassifiedState?
 fun List<NotificationEntity>.groupActiveByCategory(): Map<ClassifiedState, List<NotificationEntity>> =
     filter { it.handledAt == null && it.snoozedUntil == null }
         .groupBy { it.effectiveState ?: ClassifiedState.FYI }
+
+/** Pinned items first (most recently pinned on top), then everything else newest-first. */
+fun List<NotificationEntity>.sortedPinnedFirst(): List<NotificationEntity> =
+    sortedWith(
+        compareByDescending<NotificationEntity> { it.pinnedAt != null }
+            .thenByDescending { it.pinnedAt ?: 0L }
+            .thenByDescending { it.timestamp }
+    )

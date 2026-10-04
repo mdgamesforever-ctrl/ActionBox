@@ -42,6 +42,9 @@
     <string name="action_search">تلاش کریں</string>
     <string name="action_continue">جاری رکھیں</string>
     <string name="action_undo">واپس لائیں</string>
+    <string name="action_pin">پن کریں</string>
+    <string name="action_unpin">پن ہٹائیں</string>
+    <string name="action_open_app">ایپ کھولیں</string>
     <string name="action_restore">بحال کریں</string>
     <string name="action_cancel">منسوخ کریں</string>
     <string name="action_add">شامل کریں</string>

@@ -13,6 +13,15 @@
          content never leaves the device," not "the app makes no network calls at all". -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Lets the card header resolve other apps' names/icons and open them (Android 11+ package
+         visibility) without the Play-restricted QUERY_ALL_PACKAGES: only launchable apps. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".ActionBoxApplication"
         android:allowBackup="true"

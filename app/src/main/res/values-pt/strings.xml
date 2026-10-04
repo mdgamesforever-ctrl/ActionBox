@@ -42,6 +42,9 @@
     <string name="action_search">Pesquisar</string>
     <string name="action_continue">Continuar</string>
     <string name="action_undo">Desfazer</string>
+    <string name="action_pin">Fixar</string>
+    <string name="action_unpin">Desafixar</string>
+    <string name="action_open_app">Abrir app</string>
     <string name="action_restore">Restaurar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_add">Adicionar</string>
