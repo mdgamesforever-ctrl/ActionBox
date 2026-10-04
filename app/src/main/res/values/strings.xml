@@ -45,6 +45,7 @@
     <string name="action_pin">Pin</string>
     <string name="action_unpin">Unpin</string>
     <string name="action_open_app">Open app</string>
+    <string name="toast_cannot_open_app">Can\'t open this app</string>
     <string name="action_restore">Restore</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>

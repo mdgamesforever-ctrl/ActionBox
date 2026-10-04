@@ -45,6 +45,7 @@
     <string name="action_pin">تثبيت</string>
     <string name="action_unpin">إلغاء التثبيت</string>
     <string name="action_open_app">فتح التطبيق</string>
+    <string name="toast_cannot_open_app">تعذّر فتح هذا التطبيق</string>
     <string name="action_restore">استعادة</string>
     <string name="action_cancel">إلغاء</string>
     <string name="action_add">إضافة</string>

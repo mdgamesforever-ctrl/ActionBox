@@ -45,6 +45,7 @@
     <string name="action_pin">Fixar</string>
     <string name="action_unpin">Desafixar</string>
     <string name="action_open_app">Abrir app</string>
+    <string name="toast_cannot_open_app">Não foi possível abrir este app</string>
     <string name="action_restore">Restaurar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_add">Adicionar</string>

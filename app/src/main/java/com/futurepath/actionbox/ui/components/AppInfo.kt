@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import com.futurepath.actionbox.R
 import androidx.core.graphics.drawable.toBitmap
 import java.util.concurrent.ConcurrentHashMap
 
@@ -53,8 +54,9 @@ fun openSourceApp(context: Context, packageName: String) {
     val intent = context.packageManager.getLaunchIntentForPackage(packageName)
         ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
-        if (intent != null) context.startActivity(intent)
+        if (intent == null) throw IllegalStateException("not launchable")
+        context.startActivity(intent)
     } catch (e: Exception) {
-        Toast.makeText(context, packageName, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, R.string.toast_cannot_open_app, Toast.LENGTH_SHORT).show()
     }
 }

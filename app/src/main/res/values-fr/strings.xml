@@ -45,6 +45,7 @@
     <string name="action_pin">Épingler</string>
     <string name="action_unpin">Désépingler</string>
     <string name="action_open_app">Ouvrir l\'app</string>
+    <string name="toast_cannot_open_app">Impossible d\'ouvrir cette app</string>
     <string name="action_restore">Restaurer</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_add">Ajouter</string>

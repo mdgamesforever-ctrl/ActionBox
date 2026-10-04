@@ -45,6 +45,7 @@
     <string name="action_pin">Sematkan</string>
     <string name="action_unpin">Lepas sematan</string>
     <string name="action_open_app">Buka aplikasi</string>
+    <string name="toast_cannot_open_app">Tidak dapat membuka aplikasi ini</string>
     <string name="action_restore">Pulihkan</string>
     <string name="action_cancel">Batal</string>
     <string name="action_add">Tambah</string>

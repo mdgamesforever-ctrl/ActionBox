@@ -120,7 +120,7 @@ fun NotificationCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    if (appInfo?.canOpen == true) {
+                    if (appInfo?.canOpen != false) {
                         IconButton(onClick = { openSourceApp(context, notification.sourceApp) }) {
                             Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = stringResource(R.string.action_open_app))
                         }

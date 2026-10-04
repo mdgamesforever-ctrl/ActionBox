@@ -45,6 +45,7 @@
     <string name="action_pin">پن کریں</string>
     <string name="action_unpin">پن ہٹائیں</string>
     <string name="action_open_app">ایپ کھولیں</string>
+    <string name="toast_cannot_open_app">یہ ایپ نہیں کھل سکتی</string>
     <string name="action_restore">بحال کریں</string>
     <string name="action_cancel">منسوخ کریں</string>
     <string name="action_add">شامل کریں</string>
